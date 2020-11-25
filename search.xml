@@ -75,7 +75,7 @@
       </tags>
   </entry>
   <entry>
-    <title>groupcache源码分析4</title>
+    <title>groupcache源码分析4:singleflight.go</title>
     <url>/2020/03/14/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%904/</url>
     <content><![CDATA[<p>singleflight.go文件代码不多，主要是提供了一个竞争执行方法，利用sync.WaitGroup来让重复的请求，进行等待，只实际执行一次，并将执行结果返回给所有等待的请求。算是一个并发的处理机制。</p>
 <a id="more"></a>
@@ -101,7 +101,7 @@
       </tags>
   </entry>
   <entry>
-    <title>groupcache源码分析6</title>
+    <title>groupcache源码分析6:sink.go</title>
     <url>/2020/03/21/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%906/</url>
     <content><![CDATA[<p>sink.go文件实际上也是提供数据结构，在ByteView之上做了一层封装。</p>
 <a id="more"></a>
@@ -141,7 +141,7 @@
       </tags>
   </entry>
   <entry>
-    <title>groupcache源码分析5</title>
+    <title>groupcache源码分析5:byteview.go</title>
     <url>/2020/03/15/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%905/</url>
     <content><![CDATA[<p>byteview.go文件提供了一个数据结构ByteView，它是对[]byte或string类型的一个封装，提供了一些方法。</p>
 <a id="more"></a>
@@ -199,7 +199,7 @@
       </tags>
   </entry>
   <entry>
-    <title>groupcache源码分析7</title>
+    <title>groupcache源码分析7:peers.go</title>
     <url>/2020/03/22/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%907/</url>
     <content><![CDATA[<p>peers.go文件的主要作用是用来定义如何查找和与其他peer沟通，peer的中文翻译为同伴，可以理解为其他机器。</p>
 <a id="more"></a>
@@ -227,7 +227,7 @@
       </tags>
   </entry>
   <entry>
-    <title>groupcache源码分析8</title>
+    <title>groupcache源码分析8:http.go</title>
     <url>/2020/03/24/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%908/</url>
     <content><![CDATA[<p>http.go定义了groupcache接收到http请求时怎么去执行操作，算是一个主要流程文件。</p>
 <a id="more"></a>
@@ -276,7 +276,7 @@
       </tags>
   </entry>
   <entry>
-    <title>groupcache源码分析9</title>
+    <title>groupcache源码分析9:groupcache.go</title>
     <url>/2020/03/29/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%909/</url>
     <content><![CDATA[<p>终于到了最后一个文件groupcache.go，跟项目同名，看着就知道它的重要性了。前面我们分析了那么多，这一篇就来看看如何利用那些零件，来具体去实现整个缓存逻辑。</p>
 <a id="more"></a>
