@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.1/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css">
+
+<script class="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","images":"/images","scheme":"Pisces","version":"8.0.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}};
+  </script>
+<meta name="description" content="终于到了最后一个文件groupcache.go，跟项目同名，看着就知道它的重要性了。前面我们分析了那么多，这一篇就来看看如何利用那些零件，来具体去实现整个缓存逻辑。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="groupcache源码分析9">
+<meta property="og:url" content="http://example.com/2020/03/29/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%909/index.html">
+<meta property="og:site_name" content="EricLuj的博客">
+<meta property="og:description" content="终于到了最后一个文件groupcache.go，跟项目同名，看着就知道它的重要性了。前面我们分析了那么多，这一篇就来看看如何利用那些零件，来具体去实现整个缓存逻辑。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-03-29T13:34:37.000Z">
+<meta property="article:modified_time" content="2020-11-25T13:42:25.879Z">
+<meta property="article:author" content="Eric Luj">
+<meta property="article:tag" content="groupcache">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://example.com/2020/03/29/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%909/">
+
+
+<script class="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+<title>groupcache源码分析9 | EricLuj的博客</title>
+  
+
+
+
+  <noscript>
+  <style>
+  body { margin-top: 2rem; }
+
+  .use-motion .menu-item,
+  .use-motion .sidebar,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header {
+    visibility: visible;
+  }
+
+  .use-motion .header,
+  .use-motion .site-brand-container .toggle,
+  .use-motion .footer { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle,
+  .use-motion .custom-logo-image {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line {
+    transform: scaleX(1);
+  }
+
+  .search-pop-overlay, .sidebar-nav { display: none; }
+  .sidebar-panel { display: block; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">EricLuj的博客</h1>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-overview-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <section class="post-toc-wrap sidebar-panel">
+        </section>
+        <!--/noindex-->
+
+        <section class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">Eric Luj</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">11</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+        </section>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2020/03/29/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%909/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Eric Luj">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="EricLuj的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          groupcache源码分析9
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-03-29 21:34:37" itemprop="dateCreated datePublished" datetime="2020-03-29T21:34:37+08:00">2020-03-29</time>
+    </span>
+      <span class="post-meta-item">
+        <span class="post-meta-item-icon">
+          <i class="far fa-calendar-check"></i>
+        </span>
+        <span class="post-meta-item-text">更新于</span>
+        <time title="修改时间：2020-11-25 21:42:25" itemprop="dateModified" datetime="2020-11-25T21:42:25+08:00">2020-11-25</time>
+      </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/go/" itemprop="url" rel="index"><span itemprop="name">go</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/go/groupcache/" itemprop="url" rel="index"><span itemprop="name">groupcache</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span id="busuanzi_value_page_pv"></span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>终于到了最后一个文件groupcache.go，跟项目同名，看着就知道它的重要性了。前面我们分析了那么多，这一篇就来看看如何利用那些零件，来具体去实现整个缓存逻辑。</p>
+<a id="more"></a>
+
+<ol>
+<li><p>Getter接口，又一个Get方法，根据key查询到对应值，保存到dest中。GetterFunc是一个实现了Getter接口的func类型。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> Getter <span class="keyword">interface</span> &#123;</span><br><span class="line">	Get(ctx context.Context, key <span class="keyword">string</span>, dest Sink) error</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> GetterFunc <span class="function"><span class="keyword">func</span><span class="params">(ctx context.Context, key <span class="keyword">string</span>, dest Sink)</span> <span class="title">error</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(f GetterFunc)</span> <span class="title">Get</span><span class="params">(ctx context.Context, key <span class="keyword">string</span>, dest Sink)</span> <span class="title">error</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> f(ctx, key, dest)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>定义一些使用到的变量。groups保存group与其对应结构体，initPeerServerOnce是一个sync.Once，它能保证Do方法只会被执行一次，实际上就是保证initPeerServer只会被执行一次。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> (</span><br><span class="line">	mu     sync.RWMutex</span><br><span class="line">	groups = <span class="built_in">make</span>(<span class="keyword">map</span>[<span class="keyword">string</span>]*Group)</span><br><span class="line"></span><br><span class="line">	initPeerServerOnce sync.Once</span><br><span class="line">	initPeerServer     <span class="function"><span class="keyword">func</span><span class="params">()</span></span></span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>读锁并获取group名称对应的对象。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">GetGroup</span><span class="params">(name <span class="keyword">string</span>)</span> *<span class="title">Group</span></span> &#123;</span><br><span class="line">	mu.RLock()</span><br><span class="line">	g := groups[name]</span><br><span class="line">	mu.RUnlock()</span><br><span class="line">	<span class="keyword">return</span> g</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>创建Group，名称需保证唯一。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">NewGroup</span><span class="params">(name <span class="keyword">string</span>, cacheBytes <span class="keyword">int64</span>, getter Getter)</span> *<span class="title">Group</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> newGroup(name, cacheBytes, getter, <span class="literal">nil</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">newGroup</span><span class="params">(name <span class="keyword">string</span>, cacheBytes <span class="keyword">int64</span>, getter Getter, peers PeerPicker)</span> *<span class="title">Group</span></span> &#123;</span><br><span class="line">	<span class="keyword">if</span> getter == <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="built_in">panic</span>(<span class="string">&quot;nil Getter&quot;</span>)</span><br><span class="line">	&#125;</span><br><span class="line">	mu.Lock()</span><br><span class="line">	<span class="keyword">defer</span> mu.Unlock()</span><br><span class="line">	initPeerServerOnce.Do(callInitPeerServer) <span class="comment">//保证callInitPeerServer只会被调用一次</span></span><br><span class="line">	<span class="keyword">if</span> _, dup := groups[name]; dup &#123;</span><br><span class="line">		<span class="built_in">panic</span>(<span class="string">&quot;duplicate registration of group &quot;</span> + name)</span><br><span class="line">	&#125;</span><br><span class="line">	g := &amp;Group&#123;</span><br><span class="line">		name:       name,</span><br><span class="line">		getter:     getter,</span><br><span class="line">		peers:      peers,</span><br><span class="line">		cacheBytes: cacheBytes,</span><br><span class="line">		loadGroup:  &amp;singleflight.Group&#123;&#125;,</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">if</span> fn := newGroupHook; fn != <span class="literal">nil</span> &#123; <span class="comment">//钩子方法</span></span><br><span class="line">		fn(g)</span><br><span class="line">	&#125;</span><br><span class="line">	groups[name] = g</span><br><span class="line">	<span class="keyword">return</span> g</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>创建Group时用到的几个关联项。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> newGroupHook <span class="function"><span class="keyword">func</span><span class="params">(*Group)</span> //钩子，创建<span class="title">Group</span>时被调用。</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">RegisterNewGroupHook</span><span class="params">(fn <span class="keyword">func</span>(*Group)</span>)</span> &#123; </span><br><span class="line">	<span class="keyword">if</span> newGroupHook != <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="built_in">panic</span>(<span class="string">&quot;RegisterNewGroupHook called more than once&quot;</span>)</span><br><span class="line">	&#125;</span><br><span class="line">	newGroupHook = fn</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">RegisterServerStart</span><span class="params">(fn <span class="keyword">func</span>()</span>)</span> &#123;</span><br><span class="line">	<span class="keyword">if</span> initPeerServer != <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="built_in">panic</span>(<span class="string">&quot;RegisterServerStart called more than once&quot;</span>)</span><br><span class="line">	&#125;</span><br><span class="line">	initPeerServer = fn</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">callInitPeerServer</span><span class="params">()</span></span> &#123; <span class="comment">//钩子，当第一个Group被创建时调用。</span></span><br><span class="line">	<span class="keyword">if</span> initPeerServer != <span class="literal">nil</span> &#123;</span><br><span class="line">		initPeerServer()</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>Group结构体的定义。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> Group <span class="keyword">struct</span> &#123;</span><br><span class="line">	name       <span class="keyword">string</span> <span class="comment">//名称</span></span><br><span class="line">	getter     Getter <span class="comment">//获取缓存的方法</span></span><br><span class="line">	peersOnce  sync.Once</span><br><span class="line">	peers      PeerPicker</span><br><span class="line">	cacheBytes <span class="keyword">int64</span> <span class="comment">//缓存大小限制</span></span><br><span class="line"></span><br><span class="line">	mainCache cache <span class="comment">//属于当前peer的缓存</span></span><br><span class="line">	hotCache cache <span class="comment">//属于其他peer的缓存，但是被查询当前peer额外保存一份</span></span><br><span class="line"></span><br><span class="line">	loadGroup flightGroup <span class="comment">//竞争请求，前面的singleflight.go</span></span><br><span class="line"></span><br><span class="line">	_ <span class="keyword">int32</span> </span><br><span class="line">	Stats Stats <span class="comment">//统计值</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> flightGroup <span class="keyword">interface</span> &#123;</span><br><span class="line">	Do(key <span class="keyword">string</span>, fn <span class="function"><span class="keyword">func</span><span class="params">()</span> <span class="params">(<span class="keyword">interface</span>&#123;&#125;, error)</span>) <span class="params">(<span class="keyword">interface</span>&#123;&#125;, error)</span></span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> Stats <span class="keyword">struct</span> &#123;</span><br><span class="line">	Gets           AtomicInt <span class="comment">//get请求总次数</span></span><br><span class="line">	CacheHits      AtomicInt <span class="comment">//从mainCache或hotCache命中的次数</span></span><br><span class="line">	PeerLoads      AtomicInt <span class="comment">//从其他peer获取数据的次数</span></span><br><span class="line">	PeerErrors     AtomicInt <span class="comment">//从其他peer获取数据错误的次数</span></span><br><span class="line">	Loads          AtomicInt <span class="comment">//非命中本peer的cache次数</span></span><br><span class="line">	LoadsDeduped   AtomicInt <span class="comment">//同一时间多请求只记一次</span></span><br><span class="line">	LocalLoads     AtomicInt <span class="comment">//从local获取数据总次数</span></span><br><span class="line">	LocalLoadErrs  AtomicInt <span class="comment">//从local获取数据错误次数</span></span><br><span class="line">	ServerRequests AtomicInt <span class="comment">//peer的所有http请求总次数</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>Name方法返回名称。initPeers对peers属性赋值。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(g *Group)</span> <span class="title">Name</span><span class="params">()</span> <span class="title">string</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> g.name</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(g *Group)</span> <span class="title">initPeers</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">if</span> g.peers == <span class="literal">nil</span> &#123;</span><br><span class="line">		g.peers = getPeers(g.name)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>这个方法是Group，根据参数key查询数据，然后将值放到dest里面。这里要注意下destPopulated的逻辑。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(g *Group)</span> <span class="title">Get</span><span class="params">(ctx context.Context, key <span class="keyword">string</span>, dest Sink)</span> <span class="title">error</span></span> &#123;</span><br><span class="line">	g.peersOnce.Do(g.initPeers) <span class="comment">//保证initPeers只被执行一次</span></span><br><span class="line">	g.Stats.Gets.Add(<span class="number">1</span>) <span class="comment">//统计http总数量</span></span><br><span class="line">	<span class="keyword">if</span> dest == <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> errors.New(<span class="string">&quot;groupcache: nil dest Sink&quot;</span>)</span><br><span class="line">	&#125;</span><br><span class="line">	value, cacheHit := g.lookupCache(key) <span class="comment">//从mainCache和hotCache中查询</span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> cacheHit &#123; <span class="comment">//查询到统计+1并返回数据</span></span><br><span class="line">		g.Stats.CacheHits.Add(<span class="number">1</span>)</span><br><span class="line">		<span class="keyword">return</span> setSinkView(dest, value)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	destPopulated := <span class="literal">false</span></span><br><span class="line">    <span class="comment">//同时多个请求，只有真正执行了的那个call，才会destPopulated返回true</span></span><br><span class="line">    <span class="comment">//为避免对dest中的值（实际时指针）重复赋值，只需要执行一次</span></span><br><span class="line">	value, destPopulated, err := g.load(ctx, key, dest) </span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> err</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">if</span> destPopulated &#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> setSinkView(dest, value)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>依次从mainCache和hotCache获取数据。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(g *Group)</span> <span class="title">lookupCache</span><span class="params">(key <span class="keyword">string</span>)</span> <span class="params">(value ByteView, ok <span class="keyword">bool</span>)</span></span> &#123;</span><br><span class="line">	<span class="keyword">if</span> g.cacheBytes &lt;= <span class="number">0</span> &#123;</span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line">	value, ok = g.mainCache.get(key)</span><br><span class="line">	<span class="keyword">if</span> ok &#123;</span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line">	value, ok = g.hotCache.get(key)</span><br><span class="line">	<span class="keyword">return</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>加载数据。</p>
+</li>
+</ol>
+<p>Do方法中又再次进行了lookupCache，注释里是这么说的，singleflight只能对同时重叠的调用进行处理，假设有两个请求同时错过了cache，会导致load被调用两次，不幸的情况会导致cache.nbytes做出错误的计算。</p>
+<p>我们梳理一下上面这段话，按照singleflight的逻辑，如果两个请求同时进入了Do方法，因为lock的缘故，第一个获的锁的执行，第二个等待锁释放，然后拿到call的返回值，实际并未执行。一开始我没想通，这样冲突不是不存在吗，为啥还要lookupCache一次呢？事实上，可能存在这一种情况，两个请求过来都没查到缓存，然后同时进入load方法，假如现在第一个执行的比较快，在第二个还没有获取锁就执行完毕退出了，则请求二成功获取锁，执行操作并且增加cache.nbytes，那么就会计算不正确了。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(g *Group)</span> <span class="title">load</span><span class="params">(ctx context.Context, key <span class="keyword">string</span>, dest Sink)</span> <span class="params">(value ByteView, destPopulated <span class="keyword">bool</span>, err error)</span></span> &#123;</span><br><span class="line">	g.Stats.Loads.Add(<span class="number">1</span>)</span><br><span class="line">	viewi, err := g.loadGroup.Do(key, <span class="function"><span class="keyword">func</span><span class="params">()</span> <span class="params">(<span class="keyword">interface</span>&#123;&#125;, error)</span></span> &#123;</span><br><span class="line">		<span class="keyword">if</span> value, cacheHit := g.lookupCache(key); cacheHit &#123;</span><br><span class="line">			g.Stats.CacheHits.Add(<span class="number">1</span>)</span><br><span class="line">			<span class="keyword">return</span> value, <span class="literal">nil</span></span><br><span class="line">		&#125;</span><br><span class="line">		g.Stats.LoadsDeduped.Add(<span class="number">1</span>)</span><br><span class="line">		<span class="keyword">var</span> value ByteView</span><br><span class="line">		<span class="keyword">var</span> err error</span><br><span class="line">		<span class="keyword">if</span> peer, ok := g.peers.PickPeer(key); ok &#123; <span class="comment">//获取peer，如果peer是自身返回nil</span></span><br><span class="line">			value, err = g.getFromPeer(ctx, peer, key) <span class="comment">//从peer获取值</span></span><br><span class="line">			<span class="keyword">if</span> err == <span class="literal">nil</span> &#123;</span><br><span class="line">				g.Stats.PeerLoads.Add(<span class="number">1</span>)</span><br><span class="line">				<span class="keyword">return</span> value, <span class="literal">nil</span></span><br><span class="line">			&#125;</span><br><span class="line">			g.Stats.PeerErrors.Add(<span class="number">1</span>)			</span><br><span class="line">		&#125;</span><br><span class="line">		value, err = g.getLocally(ctx, key, dest) <span class="comment">//从本地获取数据</span></span><br><span class="line">		<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">			g.Stats.LocalLoadErrs.Add(<span class="number">1</span>)</span><br><span class="line">			<span class="keyword">return</span> <span class="literal">nil</span>, err</span><br><span class="line">		&#125;</span><br><span class="line">		g.Stats.LocalLoads.Add(<span class="number">1</span>)</span><br><span class="line">		destPopulated = <span class="literal">true</span> <span class="comment">// dest已经被填充</span></span><br><span class="line">		g.populateCache(key, value, &amp;g.mainCache) <span class="comment">//数据加到mainCache中</span></span><br><span class="line">		<span class="keyword">return</span> value, <span class="literal">nil</span></span><br><span class="line">	&#125;)</span><br><span class="line">	<span class="keyword">if</span> err == <span class="literal">nil</span> &#123;</span><br><span class="line">		value = viewi.(ByteView)</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ol start="11">
+<li><p>从其他peer获取数据，peer.Get实际就是httpGetter的Get方法。这里使用了一个随机函数，一定概率会将其放入hotCache。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(g *Group)</span> <span class="title">getFromPeer</span><span class="params">(ctx context.Context, peer ProtoGetter, key <span class="keyword">string</span>)</span> <span class="params">(ByteView, error)</span></span> &#123;</span><br><span class="line">	req := &amp;pb.GetRequest&#123;</span><br><span class="line">		Group: &amp;g.name,</span><br><span class="line">		Key:   &amp;key,</span><br><span class="line">	&#125;</span><br><span class="line">	res := &amp;pb.GetResponse&#123;&#125;</span><br><span class="line">	err := peer.Get(ctx, req, res)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> ByteView&#123;&#125;, err</span><br><span class="line">	&#125;</span><br><span class="line">	value := ByteView&#123;b: res.Value&#125;</span><br><span class="line">	<span class="keyword">if</span> rand.Intn(<span class="number">10</span>) == <span class="number">0</span> &#123;</span><br><span class="line">		g.populateCache(key, value, &amp;g.hotCache)</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> value, <span class="literal">nil</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>getLocally中实际调用的Get方法是我们在创建Group的时候去设定的，我们会在后面实际使用中介绍。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(g *Group)</span> <span class="title">getLocally</span><span class="params">(ctx context.Context, key <span class="keyword">string</span>, dest Sink)</span> <span class="params">(ByteView, error)</span></span> &#123;</span><br><span class="line">	err := g.getter.Get(ctx, key, dest)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> ByteView&#123;&#125;, err</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> dest.view()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>设置缓存。假如当前缓存总大小超过了上线，那么使用lru来去除最老的值。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(g *Group)</span> <span class="title">populateCache</span><span class="params">(key <span class="keyword">string</span>, value ByteView, cache *cache)</span></span> &#123;</span><br><span class="line">	<span class="keyword">if</span> g.cacheBytes &lt;= <span class="number">0</span> &#123;</span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line">	cache.add(key, value)</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span> &#123;</span><br><span class="line">		mainBytes := g.mainCache.bytes()</span><br><span class="line">		hotBytes := g.hotCache.bytes()</span><br><span class="line">		<span class="keyword">if</span> mainBytes+hotBytes &lt;= g.cacheBytes &#123;</span><br><span class="line">			<span class="keyword">return</span></span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		victim := &amp;g.mainCache</span><br><span class="line">		<span class="keyword">if</span> hotBytes &gt; mainBytes/<span class="number">8</span> &#123;</span><br><span class="line">			victim = &amp;g.hotCache</span><br><span class="line">		&#125;</span><br><span class="line">		victim.removeOldest()</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>常量定义。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> CacheType <span class="keyword">int</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> (</span><br><span class="line">	MainCache CacheType = <span class="literal">iota</span> + <span class="number">1</span></span><br><span class="line">	HotCache</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>返回Group中的缓存统计信息。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(g *Group)</span> <span class="title">CacheStats</span><span class="params">(which CacheType)</span> <span class="title">CacheStats</span></span> &#123;</span><br><span class="line">	<span class="keyword">switch</span> which &#123;</span><br><span class="line">	<span class="keyword">case</span> MainCache:</span><br><span class="line">		<span class="keyword">return</span> g.mainCache.stats()</span><br><span class="line">	<span class="keyword">case</span> HotCache:</span><br><span class="line">		<span class="keyword">return</span> g.hotCache.stats()</span><br><span class="line">	<span class="keyword">default</span>:</span><br><span class="line">		<span class="keyword">return</span> CacheStats&#123;&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>cache结构体定义，与统计信息返回方法。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> cache <span class="keyword">struct</span> &#123;</span><br><span class="line">	mu         sync.RWMutex</span><br><span class="line">	nbytes     <span class="keyword">int64</span> <span class="comment">// 缓存大小</span></span><br><span class="line">	lru        *lru.Cache <span class="comment">//缓存主体，lru</span></span><br><span class="line">	nhit, nget <span class="keyword">int64</span> <span class="comment">//命中和请求数</span></span><br><span class="line">	nevict     <span class="keyword">int64</span> <span class="comment">// 驱逐数</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(c *cache)</span> <span class="title">stats</span><span class="params">()</span> <span class="title">CacheStats</span></span> &#123;</span><br><span class="line">	c.mu.RLock()</span><br><span class="line">	<span class="keyword">defer</span> c.mu.RUnlock()</span><br><span class="line">	<span class="keyword">return</span> CacheStats&#123;</span><br><span class="line">		Bytes:     c.nbytes,</span><br><span class="line">		Items:     c.itemsLocked(),</span><br><span class="line">		Gets:      c.nget,</span><br><span class="line">		Hits:      c.nhit,</span><br><span class="line">		Evictions: c.nevict,</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> CacheStats <span class="keyword">struct</span> &#123;</span><br><span class="line">	Bytes     <span class="keyword">int64</span></span><br><span class="line">	Items     <span class="keyword">int64</span></span><br><span class="line">	Gets      <span class="keyword">int64</span></span><br><span class="line">	Hits      <span class="keyword">int64</span></span><br><span class="line">	Evictions <span class="keyword">int64</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>添加缓存方法，基于lru的Add。注意这里的nbytes计算，包含key和val的总长度。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(c *cache)</span> <span class="title">add</span><span class="params">(key <span class="keyword">string</span>, value ByteView)</span></span> &#123;</span><br><span class="line">	c.mu.Lock()</span><br><span class="line">	<span class="keyword">defer</span> c.mu.Unlock()</span><br><span class="line">	<span class="keyword">if</span> c.lru == <span class="literal">nil</span> &#123;</span><br><span class="line">		c.lru = &amp;lru.Cache&#123;</span><br><span class="line">			OnEvicted: <span class="function"><span class="keyword">func</span><span class="params">(key lru.Key, value <span class="keyword">interface</span>&#123;&#125;)</span></span> &#123;</span><br><span class="line">				val := value.(ByteView)</span><br><span class="line">				c.nbytes -= <span class="keyword">int64</span>(<span class="built_in">len</span>(key.(<span class="keyword">string</span>))) + <span class="keyword">int64</span>(val.Len())</span><br><span class="line">				c.nevict++</span><br><span class="line">			&#125;,</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	c.lru.Add(key, value)</span><br><span class="line">	c.nbytes += <span class="keyword">int64</span>(<span class="built_in">len</span>(key)) + <span class="keyword">int64</span>(value.Len())</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>获取缓存。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(c *cache)</span> <span class="title">get</span><span class="params">(key <span class="keyword">string</span>)</span> <span class="params">(value ByteView, ok <span class="keyword">bool</span>)</span></span> &#123;</span><br><span class="line">	c.mu.Lock()</span><br><span class="line">	<span class="keyword">defer</span> c.mu.Unlock()</span><br><span class="line">	c.nget++</span><br><span class="line">	<span class="keyword">if</span> c.lru == <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line">	vi, ok := c.lru.Get(key)</span><br><span class="line">	<span class="keyword">if</span> !ok &#123;</span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line">	c.nhit++</span><br><span class="line">	<span class="keyword">return</span> vi.(ByteView), <span class="literal">true</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>删除老旧数据。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(c *cache)</span> <span class="title">removeOldest</span><span class="params">()</span></span> &#123;</span><br><span class="line">	c.mu.Lock()</span><br><span class="line">	<span class="keyword">defer</span> c.mu.Unlock()</span><br><span class="line">	<span class="keyword">if</span> c.lru != <span class="literal">nil</span> &#123;</span><br><span class="line">		c.lru.RemoveOldest()</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>获取缓存总大小和总数量。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(c *cache)</span> <span class="title">bytes</span><span class="params">()</span> <span class="title">int64</span></span> &#123;</span><br><span class="line">	c.mu.RLock()</span><br><span class="line">	<span class="keyword">defer</span> c.mu.RUnlock()</span><br><span class="line">	<span class="keyword">return</span> c.nbytes</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(c *cache)</span> <span class="title">items</span><span class="params">()</span> <span class="title">int64</span></span> &#123;</span><br><span class="line">	c.mu.RLock()</span><br><span class="line">	<span class="keyword">defer</span> c.mu.RUnlock()</span><br><span class="line">	<span class="keyword">return</span> c.itemsLocked()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(c *cache)</span> <span class="title">itemsLocked</span><span class="params">()</span> <span class="title">int64</span></span> &#123;</span><br><span class="line">	<span class="keyword">if</span> c.lru == <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="number">0</span></span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> <span class="keyword">int64</span>(c.lru.Len())</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>封装方法，用来完成对int64的原子操作。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> AtomicInt <span class="keyword">int64</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(i *AtomicInt)</span> <span class="title">Add</span><span class="params">(n <span class="keyword">int64</span>)</span></span> &#123;</span><br><span class="line">	atomic.AddInt64((*<span class="keyword">int64</span>)(i), n)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(i *AtomicInt)</span> <span class="title">Get</span><span class="params">()</span> <span class="title">int64</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> atomic.LoadInt64((*<span class="keyword">int64</span>)(i))</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(i *AtomicInt)</span> <span class="title">String</span><span class="params">()</span> <span class="title">string</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> strconv.FormatInt(i.Get(), <span class="number">10</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/groupcache/" rel="tag"># groupcache</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/03/24/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%908/" rel="prev" title="groupcache源码分析8">
+                  <i class="fa fa-chevron-left"></i> groupcache源码分析8
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2020/04/05/%E4%BA%8C%E5%88%86%E6%9F%A5%E6%89%BE/" rel="next" title="二分查找">
+                  二分查找 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      const activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      const commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Eric Luj</span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="//cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js"></script>
+<script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+
+
+</body>
+</html>
