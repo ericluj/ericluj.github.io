@@ -334,10 +334,21 @@
 <a id="more"></a>
 
 <ol>
-<li>协议版本和包名。<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">syntax = <span class="string">&quot;proto2&quot;</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">package</span> groupcachepb;</span><br></pre></td></tr></table></figure></li>
-<li>请求消息结构，两个字符串，分别为group和key，必须字段。<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">message GetRequest &#123;</span><br><span class="line">  required <span class="keyword">string</span> group = <span class="number">1</span>;</span><br><span class="line">  required <span class="keyword">string</span> key = <span class="number">2</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
-<li>回复消息结构，[]byte和double类型，可选字段。<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">message GetResponse &#123;</span><br><span class="line">  optional bytes value = <span class="number">1</span>;</span><br><span class="line">  optional double minute_qps = <span class="number">2</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
-<li>rpc服务定义，但是我貌似没有在代码中看到使用rpc的地方。<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">service GroupCache &#123;</span><br><span class="line">  rpc Get(GetRequest) returns (GetResponse) &#123;</span><br><span class="line">  &#125;;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<li>协议版本和包名。<pre class="line-numbers language-go" data-language="go"><code class="language-go">syntax <span class="token operator">=</span> <span class="token string">"proto2"</span><span class="token punctuation">;</span>
+
+<span class="token keyword">package</span> groupcachepb<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre></li>
+<li>请求消息结构，两个字符串，分别为group和key，必须字段。<pre class="line-numbers language-go" data-language="go"><code class="language-go">message GetRequest <span class="token punctuation">&#123;</span>
+  required <span class="token builtin">string</span> group <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+  required <span class="token builtin">string</span> key <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre></li>
+<li>回复消息结构，[]byte和double类型，可选字段。<pre class="line-numbers language-go" data-language="go"><code class="language-go">message GetResponse <span class="token punctuation">&#123;</span>
+  optional bytes value <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+  optional double minute_qps <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre></li>
+<li>rpc服务定义，但是我貌似没有在代码中看到使用rpc的地方。<pre class="line-numbers language-go" data-language="go"><code class="language-go">service GroupCache <span class="token punctuation">&#123;</span>
+  rpc <span class="token function">Get</span><span class="token punctuation">(</span>GetRequest<span class="token punctuation">)</span> returns <span class="token punctuation">(</span>GetResponse<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
 </li>
 </ol>
 
