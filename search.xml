@@ -6,9 +6,23 @@
     <content><![CDATA[<p>使用golang编写一个tcp服务，包含server和client。</p>
 <a id="more"></a>
 
+<h2 id="server"><a href="#server" class="headerlink" title="server"></a>server</h2><p>golang中提供了net包，我们可以用它来编写一个tcp服务。<br>可以通过net.Listen方法来创建一个地址的监听，返回一个listener。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go">listener<span class="token punctuation">,</span> err <span class="token operator">:=</span> net<span class="token punctuation">.</span><span class="token function">Listen</span><span class="token punctuation">(</span><span class="token string">"tcp"</span><span class="token punctuation">,</span> <span class="token string">"127.0.0.1:9000"</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>再循环调用listener的Accept()方法，这个方法会等待并获取一个客户端的连接conn，是一个net.Conn结构体。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">for</span> <span class="token punctuation">&#123;</span>
+    conn<span class="token punctuation">,</span> err <span class="token operator">:=</span> listener<span class="token punctuation">.</span><span class="token function">Accept</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p>然后启动一个goroutine来处理获取到的连接conn，一般是使用一个for循环来不停读取数据。对于conn我们将其当作一个数据流来对他进行处理即可，循环从其中读取数据并根据’\n’来进行分割。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go">reader <span class="token operator">:=</span> bufio<span class="token punctuation">.</span><span class="token function">NewReader</span><span class="token punctuation">(</span>conn<span class="token punctuation">)</span>
 
+<span class="token keyword">for</span> <span class="token punctuation">&#123;</span>
+    line<span class="token punctuation">,</span> err <span class="token operator">:=</span> reader<span class="token punctuation">.</span><span class="token function">ReadString</span><span class="token punctuation">(</span><span class="token string">'\n'</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>并且可以使用conn.Write方法来对客户端连接进行数据返回。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go">conn<span class="token punctuation">.</span><span class="token function">Write</span><span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token function">byte</span><span class="token punctuation">(</span>line<span class="token punctuation">)</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
 
-<h3 id="server"><a href="#server" class="headerlink" title="server"></a>server</h3><pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">package</span> main
+<p><strong>完整代码</strong></p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">package</span> main
 
 <span class="token keyword">import</span> <span class="token punctuation">(</span>
 	<span class="token string">"bufio"</span>
@@ -86,7 +100,11 @@
 <span class="token punctuation">&#125;</span>
 <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
-<h3 id="client"><a href="#client" class="headerlink" title="client"></a>client</h3><pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">package</span> main
+<h2 id="client"><a href="#client" class="headerlink" title="client"></a>client</h2><p>客户端可以使用 dialer.Dial方法来对server进行连接，方法的返回值也是一个net.Conn结构体，具体使用与server没有区别。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go">conn<span class="token punctuation">,</span> err <span class="token operator">:=</span> dialer<span class="token punctuation">.</span><span class="token function">Dial</span><span class="token punctuation">(</span><span class="token string">"tcp"</span><span class="token punctuation">,</span> <span class="token string">"127.0.0.1:9000"</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>我们可以给dialer的Timeout字段赋值来设置请求的超时时间，默认是没有超时。</p>
+<p><strong>完整代码</strong></p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">package</span> main
 
 <span class="token keyword">import</span> <span class="token punctuation">(</span>
 	<span class="token string">"fmt"</span>
@@ -180,39 +198,6 @@
     <span class="token comment">//返会结点对应机器</span>
 	<span class="token keyword">return</span> m<span class="token punctuation">.</span>hashMap<span class="token punctuation">[</span>m<span class="token punctuation">.</span>keys<span class="token punctuation">[</span>idx<span class="token punctuation">]</span><span class="token punctuation">]</span>
 <span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></li>
-</ol>
-]]></content>
-      <categories>
-        <category>go</category>
-        <category>groupcache</category>
-      </categories>
-      <tags>
-        <tag>groupcache</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>groupcache源码分析2:groupcachepb</title>
-    <url>/2020/03/10/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%902/</url>
-    <content><![CDATA[<p>groupcachepb打开后我们可以看到.proto文件和.pb.go文件，这玩意儿我们很熟悉，protobuf协议嘛，我们只需要关注.proto即可，.pb.go是基于他生成，关于protobuf的具体内容不详述，大家知道他是一个用来进行通信的协议即可。</p>
-<a id="more"></a>
-
-<ol>
-<li>协议版本和包名。<pre class="line-numbers language-go" data-language="go"><code class="language-go">syntax <span class="token operator">=</span> <span class="token string">"proto2"</span><span class="token punctuation">;</span>
-
-<span class="token keyword">package</span> groupcachepb<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre></li>
-<li>请求消息结构，两个字符串，分别为group和key，必须字段。<pre class="line-numbers language-go" data-language="go"><code class="language-go">message GetRequest <span class="token punctuation">&#123;</span>
-  required <span class="token builtin">string</span> group <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
-  required <span class="token builtin">string</span> key <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>
-<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre></li>
-<li>回复消息结构，[]byte和double类型，可选字段。<pre class="line-numbers language-go" data-language="go"><code class="language-go">message GetResponse <span class="token punctuation">&#123;</span>
-  optional bytes value <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
-  optional double minute_qps <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>
-<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre></li>
-<li>rpc服务定义，但是我貌似没有在代码中看到使用rpc的地方。<pre class="line-numbers language-go" data-language="go"><code class="language-go">service GroupCache <span class="token punctuation">&#123;</span>
-  rpc <span class="token function">Get</span><span class="token punctuation">(</span>GetRequest<span class="token punctuation">)</span> returns <span class="token punctuation">(</span>GetResponse<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
-  <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
-<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
-</li>
 </ol>
 ]]></content>
       <categories>
@@ -329,6 +314,39 @@
       </tags>
   </entry>
   <entry>
+    <title>groupcache源码分析2:groupcachepb</title>
+    <url>/2020/03/10/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%902/</url>
+    <content><![CDATA[<p>groupcachepb打开后我们可以看到.proto文件和.pb.go文件，这玩意儿我们很熟悉，protobuf协议嘛，我们只需要关注.proto即可，.pb.go是基于他生成，关于protobuf的具体内容不详述，大家知道他是一个用来进行通信的协议即可。</p>
+<a id="more"></a>
+
+<ol>
+<li>协议版本和包名。<pre class="line-numbers language-go" data-language="go"><code class="language-go">syntax <span class="token operator">=</span> <span class="token string">"proto2"</span><span class="token punctuation">;</span>
+
+<span class="token keyword">package</span> groupcachepb<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre></li>
+<li>请求消息结构，两个字符串，分别为group和key，必须字段。<pre class="line-numbers language-go" data-language="go"><code class="language-go">message GetRequest <span class="token punctuation">&#123;</span>
+  required <span class="token builtin">string</span> group <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+  required <span class="token builtin">string</span> key <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre></li>
+<li>回复消息结构，[]byte和double类型，可选字段。<pre class="line-numbers language-go" data-language="go"><code class="language-go">message GetResponse <span class="token punctuation">&#123;</span>
+  optional bytes value <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+  optional double minute_qps <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre></li>
+<li>rpc服务定义，但是我貌似没有在代码中看到使用rpc的地方。<pre class="line-numbers language-go" data-language="go"><code class="language-go">service GroupCache <span class="token punctuation">&#123;</span>
+  rpc <span class="token function">Get</span><span class="token punctuation">(</span>GetRequest<span class="token punctuation">)</span> returns <span class="token punctuation">(</span>GetResponse<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+</ol>
+]]></content>
+      <categories>
+        <category>go</category>
+        <category>groupcache</category>
+      </categories>
+      <tags>
+        <tag>groupcache</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>groupcache源码分析4:singleflight.go</title>
     <url>/2020/03/14/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%904/</url>
     <content><![CDATA[<p>singleflight.go文件代码不多，主要是提供了一个竞争执行方法，利用sync.WaitGroup来让重复的请求，进行等待，只实际执行一次，并将执行结果返回给所有等待的请求。算是一个并发的处理机制。</p>
@@ -374,6 +392,114 @@
 
 	<span class="token keyword">return</span> c<span class="token punctuation">.</span>val<span class="token punctuation">,</span> c<span class="token punctuation">.</span>err
 <span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></li>
+</ol>
+]]></content>
+      <categories>
+        <category>go</category>
+        <category>groupcache</category>
+      </categories>
+      <tags>
+        <tag>groupcache</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>groupcache源码分析6:sink.go</title>
+    <url>/2020/03/21/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%906/</url>
+    <content><![CDATA[<p>sink.go文件实际上也是提供数据结构，在ByteView之上做了一层封装。</p>
+<a id="more"></a>
+
+<ol>
+<li><p>Sink接口，提供三个set方法和一个view方法，view方法返回ByteView。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">type</span> Sink <span class="token keyword">interface</span> <span class="token punctuation">&#123;</span>
+	<span class="token function">SetString</span><span class="token punctuation">(</span>s <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token builtin">error</span>
+
+	<span class="token function">SetBytes</span><span class="token punctuation">(</span>v <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">byte</span><span class="token punctuation">)</span> <span class="token builtin">error</span>
+
+	<span class="token function">SetProto</span><span class="token punctuation">(</span>m proto<span class="token punctuation">.</span>Message<span class="token punctuation">)</span> <span class="token builtin">error</span>
+
+	<span class="token function">view</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>ByteView<span class="token punctuation">,</span> <span class="token builtin">error</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>[]byte类型拷贝。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token function">cloneBytes</span><span class="token punctuation">(</span>b <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">byte</span><span class="token punctuation">)</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">byte</span> <span class="token punctuation">&#123;</span>
+	c <span class="token operator">:=</span> <span class="token function">make</span><span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">byte</span><span class="token punctuation">,</span> <span class="token function">len</span><span class="token punctuation">(</span>b<span class="token punctuation">)</span><span class="token punctuation">)</span>
+	<span class="token function">copy</span><span class="token punctuation">(</span>c<span class="token punctuation">,</span> b<span class="token punctuation">)</span>
+	<span class="token keyword">return</span> c
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>setSinkView方法，将一个ByteView内容设置到Sink中。注意这里viewSetter的使用，通过它去断言s是否包含setView方法。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token function">setSinkView</span><span class="token punctuation">(</span>s Sink<span class="token punctuation">,</span> v ByteView<span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">type</span> viewSetter <span class="token keyword">interface</span> <span class="token punctuation">&#123;</span>
+		<span class="token function">setView</span><span class="token punctuation">(</span>v ByteView<span class="token punctuation">)</span> <span class="token builtin">error</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token keyword">if</span> vs<span class="token punctuation">,</span> ok <span class="token operator">:=</span> s<span class="token punctuation">.</span><span class="token punctuation">(</span>viewSetter<span class="token punctuation">)</span><span class="token punctuation">;</span> ok <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> vs<span class="token punctuation">.</span><span class="token function">setView</span><span class="token punctuation">(</span>v<span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token keyword">if</span> v<span class="token punctuation">.</span>b <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> s<span class="token punctuation">.</span><span class="token function">SetBytes</span><span class="token punctuation">(</span>v<span class="token punctuation">.</span>b<span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token keyword">return</span> s<span class="token punctuation">.</span><span class="token function">SetString</span><span class="token punctuation">(</span>v<span class="token punctuation">.</span>s<span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>文件中定义了不少实现Sink接口的结构体，但是代码中实际只用到了allocBytesSink。我们这里只单独分析一下它。创建方法和allocBytesSink结构体定义。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token function">AllocatingByteSliceSink</span><span class="token punctuation">(</span>dst <span class="token operator">*</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">byte</span><span class="token punctuation">)</span> Sink <span class="token punctuation">&#123;</span>
+	<span class="token keyword">return</span> <span class="token operator">&amp;</span>allocBytesSink<span class="token punctuation">&#123;</span>dst<span class="token punctuation">:</span> dst<span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">type</span> allocBytesSink <span class="token keyword">struct</span> <span class="token punctuation">&#123;</span>
+	dst <span class="token operator">*</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">byte</span> <span class="token comment">//这里有一个疑问，此属性有什么用呢？看代码它还是一个新分配地址，但是view方法并不需要它啊。</span>
+	v   ByteView
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>view方法没啥可说的。值得注意得是另一个setView方法，我们可以使用第2步中的setSinkView方法来赋值。还有一个有意思的点，如果v存储了[]byte，那么cloneBytes方法创建出了一个新的切片赋值，否则通过string转[]byte生成一个新的切片赋值(一个新知识点：[]byte的变量赋值指向同一个地址，string和[]byte的转换是数据复制)。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>s <span class="token operator">*</span>allocBytesSink<span class="token punctuation">)</span> <span class="token function">view</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>ByteView<span class="token punctuation">,</span> <span class="token builtin">error</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">return</span> s<span class="token punctuation">.</span>v<span class="token punctuation">,</span> <span class="token boolean">nil</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">func</span> <span class="token punctuation">(</span>s <span class="token operator">*</span>allocBytesSink<span class="token punctuation">)</span> <span class="token function">setView</span><span class="token punctuation">(</span>v ByteView<span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">if</span> v<span class="token punctuation">.</span>b <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+		<span class="token operator">*</span>s<span class="token punctuation">.</span>dst <span class="token operator">=</span> <span class="token function">cloneBytes</span><span class="token punctuation">(</span>v<span class="token punctuation">.</span>b<span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token punctuation">&#123;</span>
+		<span class="token operator">*</span>s<span class="token punctuation">.</span>dst <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token function">byte</span><span class="token punctuation">(</span>v<span class="token punctuation">.</span>s<span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+	s<span class="token punctuation">.</span>v <span class="token operator">=</span> v
+	<span class="token keyword">return</span> <span class="token boolean">nil</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>使用[]byte设置s和v</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>s <span class="token operator">*</span>allocBytesSink<span class="token punctuation">)</span> <span class="token function">setBytesOwned</span><span class="token punctuation">(</span>b <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">byte</span><span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">if</span> s<span class="token punctuation">.</span>dst <span class="token operator">==</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> errors<span class="token punctuation">.</span><span class="token function">New</span><span class="token punctuation">(</span><span class="token string">"nil AllocatingByteSliceSink *[]byte dst"</span><span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token operator">*</span>s<span class="token punctuation">.</span>dst <span class="token operator">=</span> <span class="token function">cloneBytes</span><span class="token punctuation">(</span>b<span class="token punctuation">)</span> <span class="token comment">// clone后赋值，如果b被更改，这里的dst不会变</span>
+	s<span class="token punctuation">.</span>v<span class="token punctuation">.</span>b <span class="token operator">=</span> b
+	s<span class="token punctuation">.</span>v<span class="token punctuation">.</span>s <span class="token operator">=</span> <span class="token string">""</span>
+	<span class="token keyword">return</span> <span class="token boolean">nil</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>通过proto的Message类型和[]byte类型进行赋值，内部均调用了上面setBytesOwned方法</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>s <span class="token operator">*</span>allocBytesSink<span class="token punctuation">)</span> <span class="token function">SetProto</span><span class="token punctuation">(</span>m proto<span class="token punctuation">.</span>Message<span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">&#123;</span>
+	b<span class="token punctuation">,</span> err <span class="token operator">:=</span> proto<span class="token punctuation">.</span><span class="token function">Marshal</span><span class="token punctuation">(</span>m<span class="token punctuation">)</span>
+	<span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> err
+	<span class="token punctuation">&#125;</span>
+	<span class="token keyword">return</span> s<span class="token punctuation">.</span><span class="token function">setBytesOwned</span><span class="token punctuation">(</span>b<span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">func</span> <span class="token punctuation">(</span>s <span class="token operator">*</span>allocBytesSink<span class="token punctuation">)</span> <span class="token function">SetBytes</span><span class="token punctuation">(</span>b <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">byte</span><span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">return</span> s<span class="token punctuation">.</span><span class="token function">setBytesOwned</span><span class="token punctuation">(</span><span class="token function">cloneBytes</span><span class="token punctuation">(</span>b<span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>string类型的赋值</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>s <span class="token operator">*</span>allocBytesSink<span class="token punctuation">)</span> <span class="token function">SetString</span><span class="token punctuation">(</span>v <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">if</span> s<span class="token punctuation">.</span>dst <span class="token operator">==</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> errors<span class="token punctuation">.</span><span class="token function">New</span><span class="token punctuation">(</span><span class="token string">"nil AllocatingByteSliceSink *[]byte dst"</span><span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token operator">*</span>s<span class="token punctuation">.</span>dst <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token function">byte</span><span class="token punctuation">(</span>v<span class="token punctuation">)</span>
+	s<span class="token punctuation">.</span>v<span class="token punctuation">.</span>b <span class="token operator">=</span> <span class="token boolean">nil</span>
+	s<span class="token punctuation">.</span>v<span class="token punctuation">.</span>s <span class="token operator">=</span> v
+	<span class="token keyword">return</span> <span class="token boolean">nil</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></li>
 </ol>
 ]]></content>
       <categories>
@@ -540,6 +666,78 @@
       </categories>
       <tags>
         <tag>groupcache</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>二分查找</title>
+    <url>/2020/04/05/%E4%BA%8C%E5%88%86%E6%9F%A5%E6%89%BE/</url>
+    <content><![CDATA[<p>二分查找是在有序数组中进行查询的方法，思路虽简单，但是关于各种边界、+1、-1，总是会出现错误。这里以左闭右闭的形式，进行总结，做到简单易懂。</p>
+<a id="more"></a>
+
+<ol>
+<li><p>普通二分查找<br>high选取的是len(nums)-1，如此形成的是左闭右闭区间，也有很多其他地方使用左闭右开，但我觉得不易于理解和记忆。<br>mid我们使用low + (high-low)/2来获取，是为了避免溢出，(high+low)/2分子可能会超出数据上限。<br>因为左闭右闭，所以mid位置的数据我们已经查询过，所以小于target，我们将low=mid+1。大于target，high=mid-1。等于直接返回。没有查找到返回-1。另外循环条件是&lt;=，也需要注意下。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token function">search</span><span class="token punctuation">(</span>nums <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">int</span><span class="token punctuation">,</span> target <span class="token builtin">int</span><span class="token punctuation">)</span> <span class="token builtin">int</span> <span class="token punctuation">&#123;</span>
+	low <span class="token operator">:=</span> <span class="token number">0</span>
+	high <span class="token operator">:=</span> <span class="token function">len</span><span class="token punctuation">(</span>nums<span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token number">1</span>
+	<span class="token keyword">for</span> low <span class="token operator">&lt;=</span> high <span class="token punctuation">&#123;</span>
+		mid <span class="token operator">:=</span> low <span class="token operator">+</span> <span class="token punctuation">(</span>high<span class="token operator">-</span>low<span class="token punctuation">)</span><span class="token operator">/</span><span class="token number">2</span>
+		<span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">&lt;</span> target <span class="token punctuation">&#123;</span>
+			low <span class="token operator">=</span> mid <span class="token operator">+</span> <span class="token number">1</span>
+		<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">></span> target <span class="token punctuation">&#123;</span>
+			high <span class="token operator">=</span> mid <span class="token operator">-</span> <span class="token number">1</span>
+		<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">==</span> target <span class="token punctuation">&#123;</span>
+			<span class="token keyword">return</span> mid
+		<span class="token punctuation">&#125;</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>左边界查找<br>主体上和普通二分查找差别不大，但要注意三个差异点。<br>一是相等时high = mid - 1，因为我们是查找左边界，当相等的时候，可能左侧还有符合的数字，此时需要收缩右边界。<br>二是返回值为low，我们记住查做边界，那么返回左侧。结合上一条思考下，为什么这样可以返回符合的值呢？当nums[mid]==target，收缩边界，假若此时mid正好是左边界位置，那么对[low,mid-1]继续查询，因为一直小于low不断+1，知道low&gt;mid-1，即mid。<br>三是特殊判断，因为low的取值是不停+1，最坏情况超出上界，需要做处理，另外当循环中断时，返回索引可能不符合条件，同样要判断。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token function">left</span><span class="token punctuation">(</span>nums <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">int</span><span class="token punctuation">,</span> target <span class="token builtin">int</span><span class="token punctuation">)</span> <span class="token builtin">int</span> <span class="token punctuation">&#123;</span>
+	low <span class="token operator">:=</span> <span class="token number">0</span>
+	high <span class="token operator">:=</span> <span class="token function">len</span><span class="token punctuation">(</span>nums<span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token number">1</span>
+	<span class="token keyword">for</span> low <span class="token operator">&lt;=</span> high <span class="token punctuation">&#123;</span>
+		mid <span class="token operator">:=</span> low <span class="token operator">+</span> <span class="token punctuation">(</span>high<span class="token operator">-</span>low<span class="token punctuation">)</span><span class="token operator">/</span><span class="token number">2</span>
+		<span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">&lt;</span> target <span class="token punctuation">&#123;</span>
+			low <span class="token operator">=</span> mid <span class="token operator">+</span> <span class="token number">1</span>
+		<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">></span> target <span class="token punctuation">&#123;</span>
+			high <span class="token operator">=</span> mid <span class="token operator">-</span> <span class="token number">1</span>
+		<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">==</span> target <span class="token punctuation">&#123;</span>
+			high <span class="token operator">=</span> mid <span class="token operator">-</span> <span class="token number">1</span> <span class="token comment">//注意</span>
+		<span class="token punctuation">&#125;</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token keyword">if</span> low <span class="token operator">>=</span> <span class="token function">len</span><span class="token punctuation">(</span>nums<span class="token punctuation">)</span> <span class="token operator">||</span> nums<span class="token punctuation">[</span>low<span class="token punctuation">]</span> <span class="token operator">!=</span> target <span class="token punctuation">&#123;</span> <span class="token comment">//注意</span>
+		<span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token keyword">return</span> low <span class="token comment">//注意</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>右边界查找<br>基本和查做边界差不多，差异在：<br>low=mid+1收缩左边界<br>high不停-1，做边界检查<br>查询的是右边界，返回值为high</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token function">right</span><span class="token punctuation">(</span>nums <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">int</span><span class="token punctuation">,</span> target <span class="token builtin">int</span><span class="token punctuation">)</span> <span class="token builtin">int</span> <span class="token punctuation">&#123;</span>
+	low <span class="token operator">:=</span> <span class="token number">0</span>
+	high <span class="token operator">:=</span> <span class="token function">len</span><span class="token punctuation">(</span>nums<span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token number">1</span>
+	<span class="token keyword">for</span> low <span class="token operator">&lt;=</span> high <span class="token punctuation">&#123;</span>
+		mid <span class="token operator">:=</span> low <span class="token operator">+</span> <span class="token punctuation">(</span>high<span class="token operator">-</span>low<span class="token punctuation">)</span><span class="token operator">/</span><span class="token number">2</span>
+		<span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">&lt;</span> target <span class="token punctuation">&#123;</span>
+			low <span class="token operator">=</span> mid <span class="token operator">+</span> <span class="token number">1</span>
+		<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">></span> target <span class="token punctuation">&#123;</span>
+			high <span class="token operator">=</span> mid <span class="token operator">-</span> <span class="token number">1</span>
+		<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">==</span> target <span class="token punctuation">&#123;</span>
+			low <span class="token operator">=</span> mid <span class="token operator">+</span> <span class="token number">1</span> <span class="token comment">//注意</span>
+		<span class="token punctuation">&#125;</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token keyword">if</span> high <span class="token operator">&lt;</span> <span class="token number">0</span> <span class="token operator">||</span> nums<span class="token punctuation">[</span>high<span class="token punctuation">]</span> <span class="token operator">!=</span> target <span class="token punctuation">&#123;</span> <span class="token comment">//注意</span>
+		<span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token keyword">return</span> high <span class="token comment">//注意</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></li>
+</ol>
+]]></content>
+      <categories>
+        <category>算法</category>
+      </categories>
+      <tags>
+        <tag>算法</tag>
       </tags>
   </entry>
   <entry>
@@ -788,114 +986,6 @@
 	<span class="token punctuation">&#125;</span>
 	<span class="token keyword">return</span> <span class="token boolean">nil</span>
 <span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></li>
-</ol>
-]]></content>
-      <categories>
-        <category>go</category>
-        <category>groupcache</category>
-      </categories>
-      <tags>
-        <tag>groupcache</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>groupcache源码分析6:sink.go</title>
-    <url>/2020/03/21/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%906/</url>
-    <content><![CDATA[<p>sink.go文件实际上也是提供数据结构，在ByteView之上做了一层封装。</p>
-<a id="more"></a>
-
-<ol>
-<li><p>Sink接口，提供三个set方法和一个view方法，view方法返回ByteView。</p>
-<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">type</span> Sink <span class="token keyword">interface</span> <span class="token punctuation">&#123;</span>
-	<span class="token function">SetString</span><span class="token punctuation">(</span>s <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token builtin">error</span>
-
-	<span class="token function">SetBytes</span><span class="token punctuation">(</span>v <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">byte</span><span class="token punctuation">)</span> <span class="token builtin">error</span>
-
-	<span class="token function">SetProto</span><span class="token punctuation">(</span>m proto<span class="token punctuation">.</span>Message<span class="token punctuation">)</span> <span class="token builtin">error</span>
-
-	<span class="token function">view</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>ByteView<span class="token punctuation">,</span> <span class="token builtin">error</span><span class="token punctuation">)</span>
-<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-</li>
-<li><p>[]byte类型拷贝。</p>
-<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token function">cloneBytes</span><span class="token punctuation">(</span>b <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">byte</span><span class="token punctuation">)</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">byte</span> <span class="token punctuation">&#123;</span>
-	c <span class="token operator">:=</span> <span class="token function">make</span><span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">byte</span><span class="token punctuation">,</span> <span class="token function">len</span><span class="token punctuation">(</span>b<span class="token punctuation">)</span><span class="token punctuation">)</span>
-	<span class="token function">copy</span><span class="token punctuation">(</span>c<span class="token punctuation">,</span> b<span class="token punctuation">)</span>
-	<span class="token keyword">return</span> c
-<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-</li>
-<li><p>setSinkView方法，将一个ByteView内容设置到Sink中。注意这里viewSetter的使用，通过它去断言s是否包含setView方法。</p>
-<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token function">setSinkView</span><span class="token punctuation">(</span>s Sink<span class="token punctuation">,</span> v ByteView<span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">&#123;</span>
-	<span class="token keyword">type</span> viewSetter <span class="token keyword">interface</span> <span class="token punctuation">&#123;</span>
-		<span class="token function">setView</span><span class="token punctuation">(</span>v ByteView<span class="token punctuation">)</span> <span class="token builtin">error</span>
-	<span class="token punctuation">&#125;</span>
-	<span class="token keyword">if</span> vs<span class="token punctuation">,</span> ok <span class="token operator">:=</span> s<span class="token punctuation">.</span><span class="token punctuation">(</span>viewSetter<span class="token punctuation">)</span><span class="token punctuation">;</span> ok <span class="token punctuation">&#123;</span>
-		<span class="token keyword">return</span> vs<span class="token punctuation">.</span><span class="token function">setView</span><span class="token punctuation">(</span>v<span class="token punctuation">)</span>
-	<span class="token punctuation">&#125;</span>
-	<span class="token keyword">if</span> v<span class="token punctuation">.</span>b <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
-		<span class="token keyword">return</span> s<span class="token punctuation">.</span><span class="token function">SetBytes</span><span class="token punctuation">(</span>v<span class="token punctuation">.</span>b<span class="token punctuation">)</span>
-	<span class="token punctuation">&#125;</span>
-	<span class="token keyword">return</span> s<span class="token punctuation">.</span><span class="token function">SetString</span><span class="token punctuation">(</span>v<span class="token punctuation">.</span>s<span class="token punctuation">)</span>
-<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-</li>
-<li><p>文件中定义了不少实现Sink接口的结构体，但是代码中实际只用到了allocBytesSink。我们这里只单独分析一下它。创建方法和allocBytesSink结构体定义。</p>
-<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token function">AllocatingByteSliceSink</span><span class="token punctuation">(</span>dst <span class="token operator">*</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">byte</span><span class="token punctuation">)</span> Sink <span class="token punctuation">&#123;</span>
-	<span class="token keyword">return</span> <span class="token operator">&amp;</span>allocBytesSink<span class="token punctuation">&#123;</span>dst<span class="token punctuation">:</span> dst<span class="token punctuation">&#125;</span>
-<span class="token punctuation">&#125;</span>
-
-<span class="token keyword">type</span> allocBytesSink <span class="token keyword">struct</span> <span class="token punctuation">&#123;</span>
-	dst <span class="token operator">*</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">byte</span> <span class="token comment">//这里有一个疑问，此属性有什么用呢？看代码它还是一个新分配地址，但是view方法并不需要它啊。</span>
-	v   ByteView
-<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-</li>
-<li><p>view方法没啥可说的。值得注意得是另一个setView方法，我们可以使用第2步中的setSinkView方法来赋值。还有一个有意思的点，如果v存储了[]byte，那么cloneBytes方法创建出了一个新的切片赋值，否则通过string转[]byte生成一个新的切片赋值(一个新知识点：[]byte的变量赋值指向同一个地址，string和[]byte的转换是数据复制)。</p>
-<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>s <span class="token operator">*</span>allocBytesSink<span class="token punctuation">)</span> <span class="token function">view</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>ByteView<span class="token punctuation">,</span> <span class="token builtin">error</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
-	<span class="token keyword">return</span> s<span class="token punctuation">.</span>v<span class="token punctuation">,</span> <span class="token boolean">nil</span>
-<span class="token punctuation">&#125;</span>
-
-<span class="token keyword">func</span> <span class="token punctuation">(</span>s <span class="token operator">*</span>allocBytesSink<span class="token punctuation">)</span> <span class="token function">setView</span><span class="token punctuation">(</span>v ByteView<span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">&#123;</span>
-	<span class="token keyword">if</span> v<span class="token punctuation">.</span>b <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
-		<span class="token operator">*</span>s<span class="token punctuation">.</span>dst <span class="token operator">=</span> <span class="token function">cloneBytes</span><span class="token punctuation">(</span>v<span class="token punctuation">.</span>b<span class="token punctuation">)</span>
-	<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token punctuation">&#123;</span>
-		<span class="token operator">*</span>s<span class="token punctuation">.</span>dst <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token function">byte</span><span class="token punctuation">(</span>v<span class="token punctuation">.</span>s<span class="token punctuation">)</span>
-	<span class="token punctuation">&#125;</span>
-	s<span class="token punctuation">.</span>v <span class="token operator">=</span> v
-	<span class="token keyword">return</span> <span class="token boolean">nil</span>
-<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-</li>
-<li><p>使用[]byte设置s和v</p>
-<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>s <span class="token operator">*</span>allocBytesSink<span class="token punctuation">)</span> <span class="token function">setBytesOwned</span><span class="token punctuation">(</span>b <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">byte</span><span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">&#123;</span>
-	<span class="token keyword">if</span> s<span class="token punctuation">.</span>dst <span class="token operator">==</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
-		<span class="token keyword">return</span> errors<span class="token punctuation">.</span><span class="token function">New</span><span class="token punctuation">(</span><span class="token string">"nil AllocatingByteSliceSink *[]byte dst"</span><span class="token punctuation">)</span>
-	<span class="token punctuation">&#125;</span>
-	<span class="token operator">*</span>s<span class="token punctuation">.</span>dst <span class="token operator">=</span> <span class="token function">cloneBytes</span><span class="token punctuation">(</span>b<span class="token punctuation">)</span> <span class="token comment">// clone后赋值，如果b被更改，这里的dst不会变</span>
-	s<span class="token punctuation">.</span>v<span class="token punctuation">.</span>b <span class="token operator">=</span> b
-	s<span class="token punctuation">.</span>v<span class="token punctuation">.</span>s <span class="token operator">=</span> <span class="token string">""</span>
-	<span class="token keyword">return</span> <span class="token boolean">nil</span>
-<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-</li>
-<li><p>通过proto的Message类型和[]byte类型进行赋值，内部均调用了上面setBytesOwned方法</p>
-<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>s <span class="token operator">*</span>allocBytesSink<span class="token punctuation">)</span> <span class="token function">SetProto</span><span class="token punctuation">(</span>m proto<span class="token punctuation">.</span>Message<span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">&#123;</span>
-	b<span class="token punctuation">,</span> err <span class="token operator">:=</span> proto<span class="token punctuation">.</span><span class="token function">Marshal</span><span class="token punctuation">(</span>m<span class="token punctuation">)</span>
-	<span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
-		<span class="token keyword">return</span> err
-	<span class="token punctuation">&#125;</span>
-	<span class="token keyword">return</span> s<span class="token punctuation">.</span><span class="token function">setBytesOwned</span><span class="token punctuation">(</span>b<span class="token punctuation">)</span>
-<span class="token punctuation">&#125;</span>
-
-<span class="token keyword">func</span> <span class="token punctuation">(</span>s <span class="token operator">*</span>allocBytesSink<span class="token punctuation">)</span> <span class="token function">SetBytes</span><span class="token punctuation">(</span>b <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">byte</span><span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">&#123;</span>
-	<span class="token keyword">return</span> s<span class="token punctuation">.</span><span class="token function">setBytesOwned</span><span class="token punctuation">(</span><span class="token function">cloneBytes</span><span class="token punctuation">(</span>b<span class="token punctuation">)</span><span class="token punctuation">)</span>
-<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-</li>
-<li><p>string类型的赋值</p>
-<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>s <span class="token operator">*</span>allocBytesSink<span class="token punctuation">)</span> <span class="token function">SetString</span><span class="token punctuation">(</span>v <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">&#123;</span>
-	<span class="token keyword">if</span> s<span class="token punctuation">.</span>dst <span class="token operator">==</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
-		<span class="token keyword">return</span> errors<span class="token punctuation">.</span><span class="token function">New</span><span class="token punctuation">(</span><span class="token string">"nil AllocatingByteSliceSink *[]byte dst"</span><span class="token punctuation">)</span>
-	<span class="token punctuation">&#125;</span>
-	<span class="token operator">*</span>s<span class="token punctuation">.</span>dst <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token function">byte</span><span class="token punctuation">(</span>v<span class="token punctuation">)</span>
-	s<span class="token punctuation">.</span>v<span class="token punctuation">.</span>b <span class="token operator">=</span> <span class="token boolean">nil</span>
-	s<span class="token punctuation">.</span>v<span class="token punctuation">.</span>s <span class="token operator">=</span> v
-	<span class="token keyword">return</span> <span class="token boolean">nil</span>
-<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></li>
 </ol>
 ]]></content>
       <categories>
@@ -1299,78 +1389,6 @@
       </categories>
       <tags>
         <tag>groupcache</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>二分查找</title>
-    <url>/2020/04/05/%E4%BA%8C%E5%88%86%E6%9F%A5%E6%89%BE/</url>
-    <content><![CDATA[<p>二分查找是在有序数组中进行查询的方法，思路虽简单，但是关于各种边界、+1、-1，总是会出现错误。这里以左闭右闭的形式，进行总结，做到简单易懂。</p>
-<a id="more"></a>
-
-<ol>
-<li><p>普通二分查找<br>high选取的是len(nums)-1，如此形成的是左闭右闭区间，也有很多其他地方使用左闭右开，但我觉得不易于理解和记忆。<br>mid我们使用low + (high-low)/2来获取，是为了避免溢出，(high+low)/2分子可能会超出数据上限。<br>因为左闭右闭，所以mid位置的数据我们已经查询过，所以小于target，我们将low=mid+1。大于target，high=mid-1。等于直接返回。没有查找到返回-1。另外循环条件是&lt;=，也需要注意下。</p>
-<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token function">search</span><span class="token punctuation">(</span>nums <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">int</span><span class="token punctuation">,</span> target <span class="token builtin">int</span><span class="token punctuation">)</span> <span class="token builtin">int</span> <span class="token punctuation">&#123;</span>
-	low <span class="token operator">:=</span> <span class="token number">0</span>
-	high <span class="token operator">:=</span> <span class="token function">len</span><span class="token punctuation">(</span>nums<span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token number">1</span>
-	<span class="token keyword">for</span> low <span class="token operator">&lt;=</span> high <span class="token punctuation">&#123;</span>
-		mid <span class="token operator">:=</span> low <span class="token operator">+</span> <span class="token punctuation">(</span>high<span class="token operator">-</span>low<span class="token punctuation">)</span><span class="token operator">/</span><span class="token number">2</span>
-		<span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">&lt;</span> target <span class="token punctuation">&#123;</span>
-			low <span class="token operator">=</span> mid <span class="token operator">+</span> <span class="token number">1</span>
-		<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">></span> target <span class="token punctuation">&#123;</span>
-			high <span class="token operator">=</span> mid <span class="token operator">-</span> <span class="token number">1</span>
-		<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">==</span> target <span class="token punctuation">&#123;</span>
-			<span class="token keyword">return</span> mid
-		<span class="token punctuation">&#125;</span>
-	<span class="token punctuation">&#125;</span>
-	<span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span>
-<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-</li>
-<li><p>左边界查找<br>主体上和普通二分查找差别不大，但要注意三个差异点。<br>一是相等时high = mid - 1，因为我们是查找左边界，当相等的时候，可能左侧还有符合的数字，此时需要收缩右边界。<br>二是返回值为low，我们记住查做边界，那么返回左侧。结合上一条思考下，为什么这样可以返回符合的值呢？当nums[mid]==target，收缩边界，假若此时mid正好是左边界位置，那么对[low,mid-1]继续查询，因为一直小于low不断+1，知道low&gt;mid-1，即mid。<br>三是特殊判断，因为low的取值是不停+1，最坏情况超出上界，需要做处理，另外当循环中断时，返回索引可能不符合条件，同样要判断。</p>
-<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token function">left</span><span class="token punctuation">(</span>nums <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">int</span><span class="token punctuation">,</span> target <span class="token builtin">int</span><span class="token punctuation">)</span> <span class="token builtin">int</span> <span class="token punctuation">&#123;</span>
-	low <span class="token operator">:=</span> <span class="token number">0</span>
-	high <span class="token operator">:=</span> <span class="token function">len</span><span class="token punctuation">(</span>nums<span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token number">1</span>
-	<span class="token keyword">for</span> low <span class="token operator">&lt;=</span> high <span class="token punctuation">&#123;</span>
-		mid <span class="token operator">:=</span> low <span class="token operator">+</span> <span class="token punctuation">(</span>high<span class="token operator">-</span>low<span class="token punctuation">)</span><span class="token operator">/</span><span class="token number">2</span>
-		<span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">&lt;</span> target <span class="token punctuation">&#123;</span>
-			low <span class="token operator">=</span> mid <span class="token operator">+</span> <span class="token number">1</span>
-		<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">></span> target <span class="token punctuation">&#123;</span>
-			high <span class="token operator">=</span> mid <span class="token operator">-</span> <span class="token number">1</span>
-		<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">==</span> target <span class="token punctuation">&#123;</span>
-			high <span class="token operator">=</span> mid <span class="token operator">-</span> <span class="token number">1</span> <span class="token comment">//注意</span>
-		<span class="token punctuation">&#125;</span>
-	<span class="token punctuation">&#125;</span>
-	<span class="token keyword">if</span> low <span class="token operator">>=</span> <span class="token function">len</span><span class="token punctuation">(</span>nums<span class="token punctuation">)</span> <span class="token operator">||</span> nums<span class="token punctuation">[</span>low<span class="token punctuation">]</span> <span class="token operator">!=</span> target <span class="token punctuation">&#123;</span> <span class="token comment">//注意</span>
-		<span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span>
-	<span class="token punctuation">&#125;</span>
-	<span class="token keyword">return</span> low <span class="token comment">//注意</span>
-<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-</li>
-<li><p>右边界查找<br>基本和查做边界差不多，差异在：<br>low=mid+1收缩左边界<br>high不停-1，做边界检查<br>查询的是右边界，返回值为high</p>
-<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token function">right</span><span class="token punctuation">(</span>nums <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">int</span><span class="token punctuation">,</span> target <span class="token builtin">int</span><span class="token punctuation">)</span> <span class="token builtin">int</span> <span class="token punctuation">&#123;</span>
-	low <span class="token operator">:=</span> <span class="token number">0</span>
-	high <span class="token operator">:=</span> <span class="token function">len</span><span class="token punctuation">(</span>nums<span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token number">1</span>
-	<span class="token keyword">for</span> low <span class="token operator">&lt;=</span> high <span class="token punctuation">&#123;</span>
-		mid <span class="token operator">:=</span> low <span class="token operator">+</span> <span class="token punctuation">(</span>high<span class="token operator">-</span>low<span class="token punctuation">)</span><span class="token operator">/</span><span class="token number">2</span>
-		<span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">&lt;</span> target <span class="token punctuation">&#123;</span>
-			low <span class="token operator">=</span> mid <span class="token operator">+</span> <span class="token number">1</span>
-		<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">></span> target <span class="token punctuation">&#123;</span>
-			high <span class="token operator">=</span> mid <span class="token operator">-</span> <span class="token number">1</span>
-		<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">==</span> target <span class="token punctuation">&#123;</span>
-			low <span class="token operator">=</span> mid <span class="token operator">+</span> <span class="token number">1</span> <span class="token comment">//注意</span>
-		<span class="token punctuation">&#125;</span>
-	<span class="token punctuation">&#125;</span>
-	<span class="token keyword">if</span> high <span class="token operator">&lt;</span> <span class="token number">0</span> <span class="token operator">||</span> nums<span class="token punctuation">[</span>high<span class="token punctuation">]</span> <span class="token operator">!=</span> target <span class="token punctuation">&#123;</span> <span class="token comment">//注意</span>
-		<span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span>
-	<span class="token punctuation">&#125;</span>
-	<span class="token keyword">return</span> high <span class="token comment">//注意</span>
-<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></li>
-</ol>
-]]></content>
-      <categories>
-        <category>算法</category>
-      </categories>
-      <tags>
-        <tag>算法</tag>
       </tags>
   </entry>
   <entry>
