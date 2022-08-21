@@ -1,119 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>二分查找</title>
-    <url>/2020/04/05/algorithm/%E4%BA%8C%E5%88%86%E6%9F%A5%E6%89%BE/</url>
-    <content><![CDATA[<p>二分查找是在有序数组中进行查询的方法，思路虽简单，但是关于各种边界、+1、-1，总是会出现错误。这里以左闭右闭的形式，进行总结，做到简单易懂。</p>
-<a id="more"></a>
-
-<ol>
-<li><p>普通二分查找<br>high选取的是len(nums)-1，如此形成的是左闭右闭区间，也有很多其他地方使用左闭右开，但我觉得不易于理解和记忆。<br>mid我们使用low + (high-low)/2来获取，是为了避免溢出，(high+low)/2分子可能会超出数据上限。<br>因为左闭右闭，所以mid位置的数据我们已经查询过，所以小于target，我们将low=mid+1。大于target，high=mid-1。等于直接返回。没有查找到返回-1。另外循环条件是&lt;=，也需要注意下。</p>
-<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token function">search</span><span class="token punctuation">(</span>nums <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">int</span><span class="token punctuation">,</span> target <span class="token builtin">int</span><span class="token punctuation">)</span> <span class="token builtin">int</span> <span class="token punctuation">&#123;</span>
-	low <span class="token operator">:=</span> <span class="token number">0</span>
-	high <span class="token operator">:=</span> <span class="token function">len</span><span class="token punctuation">(</span>nums<span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token number">1</span>
-	<span class="token keyword">for</span> low <span class="token operator">&lt;=</span> high <span class="token punctuation">&#123;</span>
-		mid <span class="token operator">:=</span> low <span class="token operator">+</span> <span class="token punctuation">(</span>high<span class="token operator">-</span>low<span class="token punctuation">)</span><span class="token operator">/</span><span class="token number">2</span>
-		<span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">&lt;</span> target <span class="token punctuation">&#123;</span>
-			low <span class="token operator">=</span> mid <span class="token operator">+</span> <span class="token number">1</span>
-		<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">></span> target <span class="token punctuation">&#123;</span>
-			high <span class="token operator">=</span> mid <span class="token operator">-</span> <span class="token number">1</span>
-		<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">==</span> target <span class="token punctuation">&#123;</span>
-			<span class="token keyword">return</span> mid
-		<span class="token punctuation">&#125;</span>
-	<span class="token punctuation">&#125;</span>
-	<span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span>
-<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-</li>
-<li><p>左边界查找<br>主体上和普通二分查找差别不大，但要注意三个差异点。<br>一是相等时high = mid - 1，因为我们是查找左边界，当相等的时候，可能左侧还有符合的数字，此时需要收缩右边界。<br>二是返回值为low，我们记住查做边界，那么返回左侧。结合上一条思考下，为什么这样可以返回符合的值呢？当nums[mid]==target，收缩边界，假若此时mid正好是左边界位置，那么对[low,mid-1]继续查询，因为一直小于low不断+1，知道low&gt;mid-1，即mid。<br>三是特殊判断，因为low的取值是不停+1，最坏情况超出上界，需要做处理，另外当循环中断时，返回索引可能不符合条件，同样要判断。</p>
-<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token function">left</span><span class="token punctuation">(</span>nums <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">int</span><span class="token punctuation">,</span> target <span class="token builtin">int</span><span class="token punctuation">)</span> <span class="token builtin">int</span> <span class="token punctuation">&#123;</span>
-	low <span class="token operator">:=</span> <span class="token number">0</span>
-	high <span class="token operator">:=</span> <span class="token function">len</span><span class="token punctuation">(</span>nums<span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token number">1</span>
-	<span class="token keyword">for</span> low <span class="token operator">&lt;=</span> high <span class="token punctuation">&#123;</span>
-		mid <span class="token operator">:=</span> low <span class="token operator">+</span> <span class="token punctuation">(</span>high<span class="token operator">-</span>low<span class="token punctuation">)</span><span class="token operator">/</span><span class="token number">2</span>
-		<span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">&lt;</span> target <span class="token punctuation">&#123;</span>
-			low <span class="token operator">=</span> mid <span class="token operator">+</span> <span class="token number">1</span>
-		<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">></span> target <span class="token punctuation">&#123;</span>
-			high <span class="token operator">=</span> mid <span class="token operator">-</span> <span class="token number">1</span>
-		<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">==</span> target <span class="token punctuation">&#123;</span>
-			high <span class="token operator">=</span> mid <span class="token operator">-</span> <span class="token number">1</span> <span class="token comment">//注意</span>
-		<span class="token punctuation">&#125;</span>
-	<span class="token punctuation">&#125;</span>
-	<span class="token keyword">if</span> low <span class="token operator">>=</span> <span class="token function">len</span><span class="token punctuation">(</span>nums<span class="token punctuation">)</span> <span class="token operator">||</span> nums<span class="token punctuation">[</span>low<span class="token punctuation">]</span> <span class="token operator">!=</span> target <span class="token punctuation">&#123;</span> <span class="token comment">//注意</span>
-		<span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span>
-	<span class="token punctuation">&#125;</span>
-	<span class="token keyword">return</span> low <span class="token comment">//注意</span>
-<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-</li>
-<li><p>右边界查找<br>基本和查做边界差不多，差异在：<br>low=mid+1收缩左边界<br>high不停-1，做边界检查<br>查询的是右边界，返回值为high</p>
-<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token function">right</span><span class="token punctuation">(</span>nums <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">int</span><span class="token punctuation">,</span> target <span class="token builtin">int</span><span class="token punctuation">)</span> <span class="token builtin">int</span> <span class="token punctuation">&#123;</span>
-	low <span class="token operator">:=</span> <span class="token number">0</span>
-	high <span class="token operator">:=</span> <span class="token function">len</span><span class="token punctuation">(</span>nums<span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token number">1</span>
-	<span class="token keyword">for</span> low <span class="token operator">&lt;=</span> high <span class="token punctuation">&#123;</span>
-		mid <span class="token operator">:=</span> low <span class="token operator">+</span> <span class="token punctuation">(</span>high<span class="token operator">-</span>low<span class="token punctuation">)</span><span class="token operator">/</span><span class="token number">2</span>
-		<span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">&lt;</span> target <span class="token punctuation">&#123;</span>
-			low <span class="token operator">=</span> mid <span class="token operator">+</span> <span class="token number">1</span>
-		<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">></span> target <span class="token punctuation">&#123;</span>
-			high <span class="token operator">=</span> mid <span class="token operator">-</span> <span class="token number">1</span>
-		<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">==</span> target <span class="token punctuation">&#123;</span>
-			low <span class="token operator">=</span> mid <span class="token operator">+</span> <span class="token number">1</span> <span class="token comment">//注意</span>
-		<span class="token punctuation">&#125;</span>
-	<span class="token punctuation">&#125;</span>
-	<span class="token keyword">if</span> high <span class="token operator">&lt;</span> <span class="token number">0</span> <span class="token operator">||</span> nums<span class="token punctuation">[</span>high<span class="token punctuation">]</span> <span class="token operator">!=</span> target <span class="token punctuation">&#123;</span> <span class="token comment">//注意</span>
-		<span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span>
-	<span class="token punctuation">&#125;</span>
-	<span class="token keyword">return</span> high <span class="token comment">//注意</span>
-<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></li>
-</ol>
-]]></content>
-      <categories>
-        <category>算法</category>
-      </categories>
-      <tags>
-        <tag>算法</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>快速排序</title>
-    <url>/2020/09/16/algorithm/%E5%BF%AB%E9%80%9F%E6%8E%92%E5%BA%8F/</url>
-    <content><![CDATA[<p>以第一个数为基准数，先从右找到一个小于它的数位置i，再从左找到一个大于它的数位置j，交换两数字。循环执行，直到i==j此时中断循环，因为先从右寻找所以i可以保证为比base小的数字，最后将他俩交换，至此i左侧全为小于等于的数字，i右侧全为大于等于的数字，然后递归区间。</p>
-<a id="more"></a>
-
-<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token function">quickSort</span><span class="token punctuation">(</span>nums <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">int</span><span class="token punctuation">,</span> left<span class="token punctuation">,</span> right <span class="token builtin">int</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
-	<span class="token keyword">if</span> left <span class="token operator">>=</span> right <span class="token punctuation">&#123;</span>
-		<span class="token keyword">return</span>
-	<span class="token punctuation">&#125;</span>
-	base <span class="token operator">:=</span> nums<span class="token punctuation">[</span>left<span class="token punctuation">]</span> <span class="token comment">//基准数</span>
-	i <span class="token operator">:=</span> left
-	j <span class="token operator">:=</span> right
-	<span class="token keyword">for</span> i <span class="token operator">!=</span> j <span class="token punctuation">&#123;</span>
-		<span class="token keyword">for</span> nums<span class="token punctuation">[</span>j<span class="token punctuation">]</span> <span class="token operator">>=</span> base <span class="token operator">&amp;&amp;</span> i <span class="token operator">&lt;</span> j <span class="token punctuation">&#123;</span>
-			j<span class="token operator">--</span>
-		<span class="token punctuation">&#125;</span>
-		<span class="token keyword">for</span> nums<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">&lt;=</span> base <span class="token operator">&amp;&amp;</span> i <span class="token operator">&lt;</span> j <span class="token punctuation">&#123;</span>
-			i<span class="token operator">++</span>
-		<span class="token punctuation">&#125;</span>
-		nums<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">,</span> nums<span class="token punctuation">[</span>j<span class="token punctuation">]</span> <span class="token operator">=</span> nums<span class="token punctuation">[</span>j<span class="token punctuation">]</span><span class="token punctuation">,</span> nums<span class="token punctuation">[</span>i<span class="token punctuation">]</span>
-	<span class="token punctuation">&#125;</span>
-	nums<span class="token punctuation">[</span>left<span class="token punctuation">]</span><span class="token punctuation">,</span> nums<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> nums<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">,</span> nums<span class="token punctuation">[</span>left<span class="token punctuation">]</span>
-	<span class="token function">quickSort</span><span class="token punctuation">(</span>nums<span class="token punctuation">,</span> left<span class="token punctuation">,</span> i <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span>
-	<span class="token function">quickSort</span><span class="token punctuation">(</span>nums<span class="token punctuation">,</span>i<span class="token operator">+</span><span class="token number">1</span><span class="token punctuation">,</span> right<span class="token punctuation">)</span>
-<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>]]></content>
-      <categories>
-        <category>算法</category>
-      </categories>
-      <tags>
-        <tag>算法</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>channel和select的使用</title>
     <url>/2022/08/07/emq/channel%E7%9A%84%E4%BD%BF%E7%94%A8/</url>
     <content><![CDATA[<p>channel和select的基本使用场景。</p>
 <a id="more"></a>
 
 <p>channel在golang中主要是用于协程间的通信，是go语言中较为复杂的一部分。这一章笔者并不打算深入的去讲解它，而是列举出在emq项目编写过程中比较常见的用法。</p>
-<h2 id="select"><a href="#select" class="headerlink" title="select"></a>select</h2><p>select和channel的使用往往是成对出现。它的使用和switch有相似之处，通过case来对channel的操作（读或写）作出判断，选取对应的分支执行。它的选择并不像if那样顺序，如果有多个条件同时判断成功，那么会<strong>随机执行</strong>。如果没有任何条件符合，那么它会默认执行default，<strong>没有default的情况则会阻塞</strong>。</p>
-<h2 id="协程A通知协程B启动"><a href="#协程A通知协程B启动" class="headerlink" title="协程A通知协程B启动"></a>协程A通知协程B启动</h2><p>先来看一段代码，这段代码中Loop start会在main start之前执行。</p>
+<h1 id="select"><a href="#select" class="headerlink" title="select"></a>select</h1><p>select和channel的使用往往是成对出现。它的使用和switch有相似之处，通过case来对channel的操作（读或写）作出判断，选取对应的分支执行。它的选择并不像if那样顺序，如果有多个条件同时判断成功，那么会<strong>随机执行</strong>。如果没有任何条件符合，那么它会默认执行default，<strong>没有default的情况则会阻塞</strong>。</p>
+<h1 id="协程A通知协程B启动"><a href="#协程A通知协程B启动" class="headerlink" title="协程A通知协程B启动"></a>协程A通知协程B启动</h1><p>先来看一段代码，这段代码中Loop start会在main start之前执行。</p>
 <pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">package</span> main
 
 <span class="token keyword">import</span> <span class="token punctuation">(</span>
@@ -157,7 +52,7 @@
 	fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"Loop start"</span><span class="token punctuation">)</span>
 <span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
-<h2 id="生产者消费者模式"><a href="#生产者消费者模式" class="headerlink" title="生产者消费者模式"></a>生产者消费者模式</h2><p>启动三个goroutine，一个往channel写数据，两个从channel读数据，达到数据交互的目的。</p>
+<h1 id="生产者消费者模式"><a href="#生产者消费者模式" class="headerlink" title="生产者消费者模式"></a>生产者消费者模式</h1><p>启动三个goroutine，一个往channel写数据，两个从channel读数据，达到数据交互的目的。</p>
 <pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">package</span> main
 
 <span class="token keyword">import</span> <span class="token punctuation">(</span>
@@ -212,7 +107,7 @@ consumer2: 3
 producer: 4
 consumer1: 4<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p>需要注意的是，多个goroutine在读同一个channel的时候，写入的数据只会被其中一个给读到。</p>
-<h2 id="消息广播"><a href="#消息广播" class="headerlink" title="消息广播"></a>消息广播</h2><p>在生产者消费者模式中我们知道了，同一条数据只会被一个goroutine给读到。那倘若需要通知所有goroutine的时候该怎么办呢？我们可以利用close(channel)的特性，一个已经被close的channel我们仍然可以读取到数据，但是只能读取到类型的零值。</p>
+<h1 id="消息广播"><a href="#消息广播" class="headerlink" title="消息广播"></a>消息广播</h1><p>在生产者消费者模式中我们知道了，同一条数据只会被一个goroutine给读到。那倘若需要通知所有goroutine的时候该怎么办呢？我们可以利用close(channel)的特性，一个已经被close的channel我们仍然可以读取到数据，但是只能读取到类型的零值。</p>
 <pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">package</span> main
 
 <span class="token keyword">import</span> <span class="token punctuation">(</span>
@@ -261,7 +156,7 @@ consumer1: 4<span aria-hidden="true" class="line-numbers-rows"><span></span><spa
 	<span class="token punctuation">&#125;</span>
 <span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p>上面代码两个Loop方法各输出5次后将不会再输出，因为读取到close信号，Loop方法执行了return。这里有一个细节需要注意的是，如果将return换为break，那么Loop方法不会结束，因为break只会退出select，不执行case往下的语句，并无法退出for循环。</p>
-<h2 id="定时器"><a href="#定时器" class="headerlink" title="定时器"></a>定时器</h2><p>time.NewTicker返回ticker，然后使用ticker.C来定时执行。</p>
+<h1 id="定时器"><a href="#定时器" class="headerlink" title="定时器"></a>定时器</h1><p>time.NewTicker返回ticker，然后使用ticker.C来定时执行。</p>
 <pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">package</span> main
 
 <span class="token keyword">import</span> <span class="token punctuation">(</span>
@@ -293,7 +188,7 @@ consumer1: 4<span aria-hidden="true" class="line-numbers-rows"><span></span><spa
     <content><![CDATA[<p>golang实现优雅退出，使用sync.WaitGroup和signal.Notify。</p>
 <a id="more"></a>
 
-<h2 id="sync-WaitGroup"><a href="#sync-WaitGroup" class="headerlink" title="sync.WaitGroup"></a>sync.WaitGroup</h2><p>通常编写代码时我们会启用多个goroutine来执行任务，为了保证在所有goroutine执行完毕后主程序才退出，可以使用sync.WaitGroup。它类似一个计数器，Add(1)方法来加1，Done()方法来减1，使用Wait()方法来阻塞程序（如果计数不为0则不会往下执行）。</p>
+<h1 id="sync-WaitGroup"><a href="#sync-WaitGroup" class="headerlink" title="sync.WaitGroup"></a>sync.WaitGroup</h1><p>通常编写代码时我们会启用多个goroutine来执行任务，为了保证在所有goroutine执行完毕后主程序才退出，可以使用sync.WaitGroup。它类似一个计数器，Add(1)方法来加1，Done()方法来减1，使用Wait()方法来阻塞程序（如果计数不为0则不会往下执行）。</p>
 <p>先看一个不使用sync.WaitGroup的例子。</p>
 <pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">package</span> main
 
@@ -347,7 +242,7 @@ one...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></sp
 two...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
 <p>wg.Wait()会阻塞住程序的退出，直到所有goroutine执行完毕（one和two的顺序不一致，因为goroutine无法保证执行顺序）。</p>
 <p>或许你会问，上面的代码不是已经可以实现优雅退出了吗，还需要signal.Notify做些啥呢？事实上，一个正常的程序更多的时候是一直在运行，直到收到退出信号（例如Ctrl+c），才终止程序。因此需要使用signal.Notify来监听退出信号。</p>
-<h2 id="signal-Notify"><a href="#signal-Notify" class="headerlink" title="signal.Notify"></a>signal.Notify</h2><p>signal.Notify可以用来监听程序信号，它的第一个参数是chan&lt;- os.Signal，第二个参数是…os.Signal（可以传入多个需要监听的信号类型）。它会将收到的信号传递给channel c，因此我们可以通过读channel来阻塞程序，直到获取到退出信号再继续往下执行。</p>
+<h1 id="signal-Notify"><a href="#signal-Notify" class="headerlink" title="signal.Notify"></a>signal.Notify</h1><p>signal.Notify可以用来监听程序信号，它的第一个参数是chan&lt;- os.Signal，第二个参数是…os.Signal（可以传入多个需要监听的信号类型）。它会将收到的信号传递给channel c，因此我们可以通过读channel来阻塞程序，直到获取到退出信号再继续往下执行。</p>
 <pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">package</span> main
 
 <span class="token keyword">import</span> <span class="token punctuation">(</span>
@@ -365,7 +260,7 @@ two...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></sp
 	fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"exit..."</span><span class="token punctuation">)</span>
 <span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p>上面的代码启动后不会主动退出，必须执行ctrl+c才会退出。</p>
-<h2 id="优雅退出"><a href="#优雅退出" class="headerlink" title="优雅退出"></a>优雅退出</h2><p>通过对sync.WaitGroup和signal.Notify的组合使用，再配合上channel关闭，我们就可以实现优雅退出。</p>
+<h1 id="优雅退出"><a href="#优雅退出" class="headerlink" title="优雅退出"></a>优雅退出</h1><p>通过对sync.WaitGroup和signal.Notify的组合使用，再配合上channel关闭，我们就可以实现优雅退出。</p>
 <pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">package</span> main
 
 <span class="token keyword">import</span> <span class="token punctuation">(</span>
@@ -528,12 +423,84 @@ two...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></sp
       </tags>
   </entry>
   <entry>
+    <title>二分查找</title>
+    <url>/2020/04/05/algorithm/%E4%BA%8C%E5%88%86%E6%9F%A5%E6%89%BE/</url>
+    <content><![CDATA[<p>二分查找是在有序数组中进行查询的方法，思路虽简单，但是关于各种边界、+1、-1，总是会出现错误。这里以左闭右闭的形式，进行总结，做到简单易懂。</p>
+<a id="more"></a>
+
+<ol>
+<li><p>普通二分查找<br>high选取的是len(nums)-1，如此形成的是左闭右闭区间，也有很多其他地方使用左闭右开，但我觉得不易于理解和记忆。<br>mid我们使用low + (high-low)/2来获取，是为了避免溢出，(high+low)/2分子可能会超出数据上限。<br>因为左闭右闭，所以mid位置的数据我们已经查询过，所以小于target，我们将low=mid+1。大于target，high=mid-1。等于直接返回。没有查找到返回-1。另外循环条件是&lt;=，也需要注意下。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token function">search</span><span class="token punctuation">(</span>nums <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">int</span><span class="token punctuation">,</span> target <span class="token builtin">int</span><span class="token punctuation">)</span> <span class="token builtin">int</span> <span class="token punctuation">&#123;</span>
+	low <span class="token operator">:=</span> <span class="token number">0</span>
+	high <span class="token operator">:=</span> <span class="token function">len</span><span class="token punctuation">(</span>nums<span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token number">1</span>
+	<span class="token keyword">for</span> low <span class="token operator">&lt;=</span> high <span class="token punctuation">&#123;</span>
+		mid <span class="token operator">:=</span> low <span class="token operator">+</span> <span class="token punctuation">(</span>high<span class="token operator">-</span>low<span class="token punctuation">)</span><span class="token operator">/</span><span class="token number">2</span>
+		<span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">&lt;</span> target <span class="token punctuation">&#123;</span>
+			low <span class="token operator">=</span> mid <span class="token operator">+</span> <span class="token number">1</span>
+		<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">></span> target <span class="token punctuation">&#123;</span>
+			high <span class="token operator">=</span> mid <span class="token operator">-</span> <span class="token number">1</span>
+		<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">==</span> target <span class="token punctuation">&#123;</span>
+			<span class="token keyword">return</span> mid
+		<span class="token punctuation">&#125;</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>左边界查找<br>主体上和普通二分查找差别不大，但要注意三个差异点。<br>一是相等时high = mid - 1，因为我们是查找左边界，当相等的时候，可能左侧还有符合的数字，此时需要收缩右边界。<br>二是返回值为low，我们记住查做边界，那么返回左侧。结合上一条思考下，为什么这样可以返回符合的值呢？当nums[mid]==target，收缩边界，假若此时mid正好是左边界位置，那么对[low,mid-1]继续查询，因为一直小于low不断+1，知道low&gt;mid-1，即mid。<br>三是特殊判断，因为low的取值是不停+1，最坏情况超出上界，需要做处理，另外当循环中断时，返回索引可能不符合条件，同样要判断。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token function">left</span><span class="token punctuation">(</span>nums <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">int</span><span class="token punctuation">,</span> target <span class="token builtin">int</span><span class="token punctuation">)</span> <span class="token builtin">int</span> <span class="token punctuation">&#123;</span>
+	low <span class="token operator">:=</span> <span class="token number">0</span>
+	high <span class="token operator">:=</span> <span class="token function">len</span><span class="token punctuation">(</span>nums<span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token number">1</span>
+	<span class="token keyword">for</span> low <span class="token operator">&lt;=</span> high <span class="token punctuation">&#123;</span>
+		mid <span class="token operator">:=</span> low <span class="token operator">+</span> <span class="token punctuation">(</span>high<span class="token operator">-</span>low<span class="token punctuation">)</span><span class="token operator">/</span><span class="token number">2</span>
+		<span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">&lt;</span> target <span class="token punctuation">&#123;</span>
+			low <span class="token operator">=</span> mid <span class="token operator">+</span> <span class="token number">1</span>
+		<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">></span> target <span class="token punctuation">&#123;</span>
+			high <span class="token operator">=</span> mid <span class="token operator">-</span> <span class="token number">1</span>
+		<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">==</span> target <span class="token punctuation">&#123;</span>
+			high <span class="token operator">=</span> mid <span class="token operator">-</span> <span class="token number">1</span> <span class="token comment">//注意</span>
+		<span class="token punctuation">&#125;</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token keyword">if</span> low <span class="token operator">>=</span> <span class="token function">len</span><span class="token punctuation">(</span>nums<span class="token punctuation">)</span> <span class="token operator">||</span> nums<span class="token punctuation">[</span>low<span class="token punctuation">]</span> <span class="token operator">!=</span> target <span class="token punctuation">&#123;</span> <span class="token comment">//注意</span>
+		<span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token keyword">return</span> low <span class="token comment">//注意</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>右边界查找<br>基本和查做边界差不多，差异在：<br>low=mid+1收缩左边界<br>high不停-1，做边界检查<br>查询的是右边界，返回值为high</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token function">right</span><span class="token punctuation">(</span>nums <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">int</span><span class="token punctuation">,</span> target <span class="token builtin">int</span><span class="token punctuation">)</span> <span class="token builtin">int</span> <span class="token punctuation">&#123;</span>
+	low <span class="token operator">:=</span> <span class="token number">0</span>
+	high <span class="token operator">:=</span> <span class="token function">len</span><span class="token punctuation">(</span>nums<span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token number">1</span>
+	<span class="token keyword">for</span> low <span class="token operator">&lt;=</span> high <span class="token punctuation">&#123;</span>
+		mid <span class="token operator">:=</span> low <span class="token operator">+</span> <span class="token punctuation">(</span>high<span class="token operator">-</span>low<span class="token punctuation">)</span><span class="token operator">/</span><span class="token number">2</span>
+		<span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">&lt;</span> target <span class="token punctuation">&#123;</span>
+			low <span class="token operator">=</span> mid <span class="token operator">+</span> <span class="token number">1</span>
+		<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">></span> target <span class="token punctuation">&#123;</span>
+			high <span class="token operator">=</span> mid <span class="token operator">-</span> <span class="token number">1</span>
+		<span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token keyword">if</span> nums<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">==</span> target <span class="token punctuation">&#123;</span>
+			low <span class="token operator">=</span> mid <span class="token operator">+</span> <span class="token number">1</span> <span class="token comment">//注意</span>
+		<span class="token punctuation">&#125;</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token keyword">if</span> high <span class="token operator">&lt;</span> <span class="token number">0</span> <span class="token operator">||</span> nums<span class="token punctuation">[</span>high<span class="token punctuation">]</span> <span class="token operator">!=</span> target <span class="token punctuation">&#123;</span> <span class="token comment">//注意</span>
+		<span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token keyword">return</span> high <span class="token comment">//注意</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></li>
+</ol>
+]]></content>
+      <categories>
+        <category>算法</category>
+      </categories>
+      <tags>
+        <tag>算法</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>golang编写tcp服务</title>
     <url>/2022/07/21/emq/golang%E7%BC%96%E5%86%99tcp%E6%9C%8D%E5%8A%A1%E5%99%A8/</url>
     <content><![CDATA[<p>使用golang编写一个tcp服务，包含server和client。</p>
 <a id="more"></a>
 
-<h2 id="server"><a href="#server" class="headerlink" title="server"></a>server</h2><p>golang中提供了net包，我们可以用它来编写一个tcp服务。<br>可以通过net.Listen方法来创建一个地址的监听，返回一个listener。</p>
+<h1 id="server"><a href="#server" class="headerlink" title="server"></a>server</h1><p>golang中提供了net包，我们可以用它来编写一个tcp服务。<br>可以通过net.Listen方法来创建一个地址的监听，返回一个listener。</p>
 <pre class="line-numbers language-go" data-language="go"><code class="language-go">listener<span class="token punctuation">,</span> err <span class="token operator">:=</span> net<span class="token punctuation">.</span><span class="token function">Listen</span><span class="token punctuation">(</span><span class="token string">"tcp"</span><span class="token punctuation">,</span> <span class="token string">"127.0.0.1:9000"</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
 <p>再循环调用listener的Accept()方法，这个方法会等待并获取一个客户端的连接conn，是一个net.Conn结构体。</p>
 <pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">for</span> <span class="token punctuation">&#123;</span>
@@ -627,7 +594,7 @@ two...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></sp
 <span class="token punctuation">&#125;</span>
 <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
-<h2 id="client"><a href="#client" class="headerlink" title="client"></a>client</h2><p>客户端可以使用 dialer.Dial方法来对server进行连接，方法的返回值也是一个net.Conn结构体，具体使用与server没有区别。</p>
+<h1 id="client"><a href="#client" class="headerlink" title="client"></a>client</h1><p>客户端可以使用 dialer.Dial方法来对server进行连接，方法的返回值也是一个net.Conn结构体，具体使用与server没有区别。</p>
 <pre class="line-numbers language-go" data-language="go"><code class="language-go">conn<span class="token punctuation">,</span> err <span class="token operator">:=</span> dialer<span class="token punctuation">.</span><span class="token function">Dial</span><span class="token punctuation">(</span><span class="token string">"tcp"</span><span class="token punctuation">,</span> <span class="token string">"127.0.0.1:9000"</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
 <p>我们可以给dialer的Timeout字段赋值来设置请求的超时时间，默认是没有超时。</p>
 <p><strong>完整代码</strong></p>
@@ -665,16 +632,49 @@ two...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></sp
       </tags>
   </entry>
   <entry>
+    <title>快速排序</title>
+    <url>/2020/09/16/algorithm/%E5%BF%AB%E9%80%9F%E6%8E%92%E5%BA%8F/</url>
+    <content><![CDATA[<p>以第一个数为基准数，先从右找到一个小于它的数位置i，再从左找到一个大于它的数位置j，交换两数字。循环执行，直到i==j此时中断循环，因为先从右寻找所以i可以保证为比base小的数字，最后将他俩交换，至此i左侧全为小于等于的数字，i右侧全为大于等于的数字，然后递归区间。</p>
+<a id="more"></a>
+
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token function">quickSort</span><span class="token punctuation">(</span>nums <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">int</span><span class="token punctuation">,</span> left<span class="token punctuation">,</span> right <span class="token builtin">int</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">if</span> left <span class="token operator">>=</span> right <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span>
+	<span class="token punctuation">&#125;</span>
+	base <span class="token operator">:=</span> nums<span class="token punctuation">[</span>left<span class="token punctuation">]</span> <span class="token comment">//基准数</span>
+	i <span class="token operator">:=</span> left
+	j <span class="token operator">:=</span> right
+	<span class="token keyword">for</span> i <span class="token operator">!=</span> j <span class="token punctuation">&#123;</span>
+		<span class="token keyword">for</span> nums<span class="token punctuation">[</span>j<span class="token punctuation">]</span> <span class="token operator">>=</span> base <span class="token operator">&amp;&amp;</span> i <span class="token operator">&lt;</span> j <span class="token punctuation">&#123;</span>
+			j<span class="token operator">--</span>
+		<span class="token punctuation">&#125;</span>
+		<span class="token keyword">for</span> nums<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">&lt;=</span> base <span class="token operator">&amp;&amp;</span> i <span class="token operator">&lt;</span> j <span class="token punctuation">&#123;</span>
+			i<span class="token operator">++</span>
+		<span class="token punctuation">&#125;</span>
+		nums<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">,</span> nums<span class="token punctuation">[</span>j<span class="token punctuation">]</span> <span class="token operator">=</span> nums<span class="token punctuation">[</span>j<span class="token punctuation">]</span><span class="token punctuation">,</span> nums<span class="token punctuation">[</span>i<span class="token punctuation">]</span>
+	<span class="token punctuation">&#125;</span>
+	nums<span class="token punctuation">[</span>left<span class="token punctuation">]</span><span class="token punctuation">,</span> nums<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> nums<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">,</span> nums<span class="token punctuation">[</span>left<span class="token punctuation">]</span>
+	<span class="token function">quickSort</span><span class="token punctuation">(</span>nums<span class="token punctuation">,</span> left<span class="token punctuation">,</span> i <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span>
+	<span class="token function">quickSort</span><span class="token punctuation">(</span>nums<span class="token punctuation">,</span>i<span class="token operator">+</span><span class="token number">1</span><span class="token punctuation">,</span> right<span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>]]></content>
+      <categories>
+        <category>算法</category>
+      </categories>
+      <tags>
+        <tag>算法</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>groupcache源码分析1:consistenthash.go</title>
     <url>/2020/03/09/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%901/</url>
     <content><![CDATA[<p>consistenthash.go文件主要是提供一个Map数据结构，它基于一致性哈希算法，来达到根据缓存的key名，去寻找对应服务器结点的作用。</p>
 <a id="more"></a>
 
-<h3 id="一致性哈希算法"><a href="#一致性哈希算法" class="headerlink" title="一致性哈希算法"></a>一致性哈希算法</h3><p>参考文章：<a href="https://www.cnblogs.com/cloudgeek/p/9427036.html">https://www.cnblogs.com/cloudgeek/p/9427036.html</a></p>
+<h1 id="一致性哈希算法"><a href="#一致性哈希算法" class="headerlink" title="一致性哈希算法"></a>一致性哈希算法</h1><p>参考文章：<a href="https://www.cnblogs.com/cloudgeek/p/9427036.html">https://www.cnblogs.com/cloudgeek/p/9427036.html</a></p>
 <p>假设我们有三台机器，有一个key需要缓存到其中一台上，我们可以通过hash(key)%N的方式来取余，这样结果必定是其中的一台机器。<br>但是上面的方式存在一个缺点，就是如果增加或者减少结点，那么其中的缓存会被大量的转移。</p>
 <p>一致性哈希的方式，是将存在的机器串在一起，首尾相连，看起来每台机器就是圆上的一个点。然后我们将hash(key)的值跟其最近一个点关联，存储在该台机器上，这样当该结点消失，我们只需要重新分配与其关联的缓存即可。如果添加结点，也只需要将已经存在某结点的部分缓存进行重新分配。<br>但是这种方式，同样存在一个缺点，如果结点较少，很容易分配不均，某台过多或者过少。</p>
 <p>于是，我们引入虚拟结点的概念，将hash(机器+num)与机器做关联，通过缓存-&gt;虚拟结点-&gt;结点的形式进行绑定，增加了数据分配的平衡性。</p>
-<h3 id="代码分析"><a href="#代码分析" class="headerlink" title="代码分析"></a>代码分析</h3><ol>
+<h1 id="代码分析"><a href="#代码分析" class="headerlink" title="代码分析"></a>代码分析</h1><ol>
 <li>Hash定义了一个函数类型，接受[]byte返回uint32，他表示我们选择哈希运算方法类型。<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">type</span> Hash <span class="token keyword">func</span><span class="token punctuation">(</span>data <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">byte</span><span class="token punctuation">)</span> <span class="token builtin">uint32</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre></li>
 <li>Map是一个数据结构，用来保存hash后的结点。<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">type</span> Map <span class="token keyword">struct</span> <span class="token punctuation">&#123;</span>
 	hash     Hash <span class="token comment">//哈希算法类型</span>
