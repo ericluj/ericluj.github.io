@@ -106,8 +106,57 @@
       </tags>
   </entry>
   <entry>
+    <title>操作系统导论笔记1:虚拟化</title>
+    <url>/2025/09/07/code/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E5%AF%BC%E8%AE%BA%E7%AC%94%E8%AE%B01:%E8%99%9A%E6%8B%9F%E5%8C%96/</url>
+    <content><![CDATA[<p>操作系统导论第一部分:虚拟化。</p>
+<a id="more"></a>
+
+<h1 id="CPU虚拟化"><a href="#CPU虚拟化" class="headerlink" title="CPU虚拟化"></a>CPU虚拟化</h1><h2 id="进程"><a href="#进程" class="headerlink" title="进程"></a>进程</h2><p>进程：一个正在运行的程序。<br>fork() 创建新进程<br>wait() 等待子进程执行完毕<br>exec() 让子进程执行与父进程不同的程序</p>
+<h2 id="受限直接执行"><a href="#受限直接执行" class="headerlink" title="受限直接执行"></a>受限直接执行</h2><p>硬件提供不同的执行模式：用户模式、内核模式<br>陷阱指令：调入内核并将特权升级为内核模式，执行操作，完成后操作系统调用一个特殊的从陷阱返回指令，回到用户模式。<br>内核通过启动时设置陷阱表，来实现os内运行代码的控制。<br><font color=red>时钟中断：时钟设备每隔几毫秒产生一次中断，中断产生时运行中断处理程序，使操作系统重新获取cpu的控制权。</font></p>
+<h2 id="进程调度介绍"><a href="#进程调度介绍" class="headerlink" title="进程调度介绍"></a>进程调度介绍</h2><p>T周转时间 = T完成时间 - T到达时间<br>T响应时间 = T首次运行 - T到达时间</p>
+<p>先进先出（FIFO）<br>最短任务优先（SJF）<br>最短完成时间优先（STJF）：SJF添加抢占，每当新工作进入系统，会确定剩余工作和新工作谁的剩余时间最少，然后调度该工作。<br>轮转（RR）：时间片长度必须是时钟中断周期的倍数；正在运行的作业在IO期间不会使用CPU。</p>
+<p>如果愿意不公平，可以运行较短的工作直到完成，但是要以响应时间为代价；重视公平性，则响应时间会较短，但会以周转时间为代价。</p>
+<h2 id="多级反馈队列（MLFQ）"><a href="#多级反馈队列（MLFQ）" class="headerlink" title="多级反馈队列（MLFQ）"></a>多级反馈队列（MLFQ）</h2><ul>
+<li>如果A的优先级&gt;B的优先级，运行A（不运行B）。</li>
+<li>如果A的优先级=的优先级，轮转运行A和B。</li>
+<li>工作进入系统时，放在最高优先级（最上层队列）。<font color=blue>如果不知道工作是短工作还是长工作，那么就在开始的时候假设其是短工作，并赋予最高优先级，如果确实是短工作，则会很快执行完毕，否则会被慢慢移入低优先级队列，这是该工作也会被认为是长工作了。</font></li>
+<li>一旦工作用完了其在某一层中的时间配额（无论中间主动放弃了多少次CPU），就降低其优先级（移入低一级队列）。防止程序在时间片运行完之前调用IO主动释放CPU</li>
+<li>经过一段时间S，就将系统中所有工作重新加入最高优先级队列。<font color=blue>防止程序被饿死，程序从cpu密集型变为交互型保证调度程序会正确对待它。</font></li>
+</ul>
+<h2 id="比例份额"><a href="#比例份额" class="headerlink" title="比例份额"></a>比例份额</h2><p>彩票调度：随机算法（智能概率上实现比例）<br>步长调度：可以每个调度周期做到完全正确，但需要全局状态（调度执行过程中如果有新进程加入无法处理）<br>比例份额没有作为CPU调度程序被广泛使用，因为不能很好适合IO，且票数分配问题没有确定的解决方式。</p>
+<h2 id="多处理器调度"><a href="#多处理器调度" class="headerlink" title="多处理器调度"></a>多处理器调度</h2><p>时间局部性：当一个数据被访问后，它很可能在不久的将来被再次访问。<br>空间局部性：当程序访问地址为X的数据时，很可能会紧接着访问X周围的数据。</p>
+<p>单队列多处理器调度（SQMS）<br>简单复用但处理器调度基本架构，多CPU共用一个队列。需要锁来保持原子性会带来较大的开销；缓存亲和性差，进程从CPU1到2运行的过程，会导致需要重新构造缓存。</p>
+<p>多队列多处理器调度（MQMS）<br>包含多个调度队列，每个队列可使用不同的调度规则。具有较好的扩展性，队列随着CPU增加而增加，锁和缓存争用开销小；工作保持在固定的CPU上，缓存亲和性较好。<br>负载不均可以通过迁移来处理（工作窃取：工作量较少的队列不定期偷看其他目标队列，从工作量较多的队列窃取一个或多个工作，来实现负载均衡）</p>
+<h1 id="内存虚拟化"><a href="#内存虚拟化" class="headerlink" title="内存虚拟化"></a>内存虚拟化</h1><h2 id="抽象地址空间"><a href="#抽象地址空间" class="headerlink" title="抽象地址空间"></a>抽象地址空间</h2><p>一个进程的地址空间包含运行的程序和所有内存状态。<br>栈stack：保存当前函数调用信息，分配空间给局部变量，传递参数和函数返回值。<br>堆heap：管理动态分配的、用户管理的内存。</p>
+<h2 id="内存操作API"><a href="#内存操作API" class="headerlink" title="内存操作API"></a>内存操作API</h2><p>对于C程序<br>栈内存：申请和释放操作编译器隐式管理。<br>堆内存：申请和释放操作有程序员显示完成。<br>malloc 分配内存<br>free 释放内存</p>
+<h2 id="地址转换"><a href="#地址转换" class="headerlink" title="地址转换"></a>地址转换</h2><p>地址转换：硬件对每次内存访问进行处理（即指令获取、数据读取或写入），将指令中的虚拟地址转换为数据实际存储的物理地址。<br>动态重定位：每个CPU需要两个硬件寄存器，基址寄存器（地址转换）和界限寄存器（判断内存地址是否异常）。<br>MMU：内存管理单元。</p>
+<h2 id="分段"><a href="#分段" class="headerlink" title="分段"></a>分段</h2><p>MMU中引入不止一个基址和界限寄存器，而是给地址空间内每个逻辑段一对。典型的三个不同的逻辑段：代码、栈和堆。<br>地址开头几位可以用来标识不同的段，剩余位表示段内偏移。<br>引入标志位是否正向增长，堆正向增长（由低到高），栈反向增长（由高到低）。堆和栈增长方向不同是为了最大化利用内存空间。<br>引入保护位（只能读取或执行），实现代码共享。<br>内存紧凑成本很高（因为拷贝段式内存密集型，占用大量处理器时间），更简单的做法是空闲列表管理算法。</p>
+<h2 id="空闲空间管理"><a href="#空闲空间管理" class="headerlink" title="空闲空间管理"></a>空闲空间管理</h2><p>空闲列表：在堆上管理空闲空间的数据结构。<br>最优匹配/最差匹配：遍历整个空闲列表，找到和请求大小一样或更大的空闲快，返回这组候选者中最小/大的一块。（需要全遍历，性能差）<br>首次匹配：找到第一个足够大的块。（会让空闲列表开头有很多小块）<br>下次匹配：多维护一个指针。指向上次查询结束位置。</p>
+<p>分离空闲列表：如果某个应用程序经常申请一种（或几种大小的内存空间），那就用一个独立的列表，只管理这样大小的对象。其他大小的请求都交给更通用的的内存分配程序。</p>
+<p>二分伙伴分配程序：但有一个内存分配请求时，空闲空间被递归的一分为二，直到刚好可以满足请求的大小（再一分为二就无法满足）。（块释放时，检查伙伴是否空闲，如果空间就合二为一，并向上递归）</p>
+<h2 id="分页"><a href="#分页" class="headerlink" title="分页"></a>分页</h2><p>分页：将进程的地址空间分割成固定大小的单元，每个单元称为一页。<br>页表：主要作用是为地址空间的每个虚拟页面保存地址转换，从而让我们知道每个页在屋里内存中的位置。页表是每个进程一个的数据结构。页表存在内存里，也可以交换到磁盘上。<br>虚拟页面号（VPN）+页内偏移量 =&gt; 转换为真正的物理地址</p>
+<p>页表项（PTE）<br>有效位：指示特定地址转换是否有效。<br>保护位：表示页是否可以可以读取、写入或执行。<br>存在位：表示该页实在物理存储器还是磁盘上。<br>脏位：表示页面被带入内存后是否被修改过。<br>参考位（访问位）：用于追踪页是否被访问，确定哪些页很受欢迎，应该保留在内存中。</p>
+<h2 id="分页：快速地址转换"><a href="#分页：快速地址转换" class="headerlink" title="分页：快速地址转换"></a>分页：快速地址转换</h2><p><font color=blue>在转换虚拟地址时，分页逻辑上需要一次额外的内存访问，这会导致变慢。</font><br>地址转换缓存（TLB）：通过引入TLB缓存来解决，地址转换带来的额外内存访问。<br>TLB上下文切换：在TLB中添加进程标识符，避免每次上下文切换需要清空TLB。</p>
+<h2 id="分页：多级页表"><a href="#分页：多级页表" class="headerlink" title="分页：多级页表"></a>分页：多级页表</h2><p><font color=blue>解决页表太大，占用内存太多。</font><br>将页表分成页大小的单元，如果整页页表项无效，就完全不分配该页的页表。通过页目录（PDE）来追踪，以此构成了二级页表。<br>有效位：若有效，该目录项指向的页表至少有一项是有效的。&lt;<br><font color=red>虚拟地址（页目录索引 + 页表索引 + 偏移量） =&gt; 转换为真正的物理地址&gt;<br>在二级的基础上再次构造出多级页表。</font><br>TLB未命中时，会带来更多次的内存加载。</p>
+<h2 id="超越物理内存"><a href="#超越物理内存" class="headerlink" title="超越物理内存"></a>超越物理内存</h2><p>交换空间：在硬盘上开辟一部分空间用于物理页的移入和移出。<br>页错误：访问不在物理内存中的页。<br>页表项（PTE）的某些位存储硬盘地址，当不在内存中可以找到硬盘的数据。</p>
+<p>虚拟地址转换流程：<br>硬件从虚拟地址获得VPN（页目录索引+页表索引），检查TLB是否匹配。<br>如果TLB未命中，则硬件在内存中查找页表（使用页表基址寄存器），使用VPN查找该页的页表项（PTE）作为索引。<br>如果页有效且在物理内存中，硬件从PTE获取PFN（页帧号），将其插入TLB，并重试该指令。<br>如果不在物理内存中，操作系统用PTE中的位获取存储硬盘地址，执行IO将页读取到内存中。IO完成时，操作系统更新页表将此页标记为已存在，更新页表项（PTE）的PFN字段，并重试该指令。</p>
+<p>页错误处理流程：<br>第一种：该页存在且有效，简单的从PTE获取PFN即可。<br>第二种：页不在物理内存。页错误处理程序需运行。<br>第三种：访问的是无效页，由于程序运行错误，操作系统陷阱处理程序运行，可能会杀死非法进程。</p>
+<h2 id="超越物理内存：策略"><a href="#超越物理内存：策略" class="headerlink" title="超越物理内存：策略"></a>超越物理内存：策略</h2><p>LRU策略：替换最近最少使用的页面。<br>近似LRU：每当页被引用（读或写）时，硬件将使用位置为1。但是硬件不会清除该位（即将其设置为0），这由操作系统负责。时钟算法（时钟指针开始时指向某个特定的页，当必须进行页替换时，操作系统检查当前指向的页P的使用位时1还是0。如果是1，则意味着页面P最近被使用，因此不适合替换。然后P的使用位置位0，时钟指针递增到下一页（P+1）。该算法一直持续找到一个使用位为0的页。<font color=blue>近似LRU可以降低全扫描带来的性能开销。</font></p>
+<p>考虑脏页：如果页已被修改而变脏，则踢出它就必须写回磁盘，这很昂贵。因此一些系统更倾向于踢出干净页。</p>
+<p>预取：操作系统会猜测一个页面即将被使用，从而提前载入。</p>
+<p>聚集（分组）写入：操作系统收集一些待完成写入，并以更高效的写入方式写入硬盘（硬盘执行单次大的写操作，比许多小的写操作更有效）</p>
+]]></content>
+      <categories>
+        <category>编码</category>
+        <category>操作系统</category>
+      </categories>
+      <tags>
+        <tag>操作系统</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>channel和select的使用</title>
-    <url>/2022/08/07/emq/channel%E7%9A%84%E4%BD%BF%E7%94%A8/</url>
+    <url>/2022/08/07/go/channel%E7%9A%84%E4%BD%BF%E7%94%A8/</url>
     <content><![CDATA[<p>channel和select的基本使用场景。</p>
 <a id="more"></a>
 
@@ -289,7 +338,7 @@ consumer1: 4<span aria-hidden="true" class="line-numbers-rows"><span></span><spa
   </entry>
   <entry>
     <title>golang实现优雅退出</title>
-    <url>/2022/08/07/emq/golang%E5%AE%9E%E7%8E%B0%E4%BC%98%E9%9B%85%E9%80%80%E5%87%BA/</url>
+    <url>/2022/08/07/go/golang%E5%AE%9E%E7%8E%B0%E4%BC%98%E9%9B%85%E9%80%80%E5%87%BA/</url>
     <content><![CDATA[<p>golang实现优雅退出，使用sync.WaitGroup和signal.Notify。</p>
 <a id="more"></a>
 
@@ -429,7 +478,7 @@ two...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></sp
   </entry>
   <entry>
     <title>golang并发下的数据控制</title>
-    <url>/2022/08/21/emq/golang%E5%B9%B6%E5%8F%91%E4%B8%8B%E7%9A%84%E6%95%B0%E6%8D%AE%E6%8E%A7%E5%88%B6/</url>
+    <url>/2022/08/21/go/golang%E5%B9%B6%E5%8F%91%E4%B8%8B%E7%9A%84%E6%95%B0%E6%8D%AE%E6%8E%A7%E5%88%B6/</url>
     <content><![CDATA[<p>golang并发下的数据控制，主要使用lock和atomic。</p>
 <a id="more"></a>
 
@@ -529,7 +578,7 @@ two...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></sp
   </entry>
   <entry>
     <title>golang编写tcp服务</title>
-    <url>/2022/07/21/emq/golang%E7%BC%96%E5%86%99tcp%E6%9C%8D%E5%8A%A1%E5%99%A8/</url>
+    <url>/2022/07/21/go/golang%E7%BC%96%E5%86%99tcp%E6%9C%8D%E5%8A%A1%E5%99%A8/</url>
     <content><![CDATA[<p>使用golang编写一个tcp服务，包含server和client。</p>
 <a id="more"></a>
 
@@ -666,7 +715,7 @@ two...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></sp
   </entry>
   <entry>
     <title>groupcache源码分析1:consistenthash.go</title>
-    <url>/2020/03/09/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%901/</url>
+    <url>/2020/03/09/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%901/</url>
     <content><![CDATA[<p>consistenthash.go文件主要是提供一个Map数据结构，它基于一致性哈希算法，来达到根据缓存的key名，去寻找对应服务器结点的作用。</p>
 <a id="more"></a>
 
@@ -736,8 +785,41 @@ two...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></sp
       </tags>
   </entry>
   <entry>
+    <title>groupcache源码分析2:groupcachepb</title>
+    <url>/2020/03/10/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%902/</url>
+    <content><![CDATA[<p>groupcachepb打开后我们可以看到.proto文件和.pb.go文件，这玩意儿我们很熟悉，protobuf协议嘛，我们只需要关注.proto即可，.pb.go是基于他生成，关于protobuf的具体内容不详述，大家知道他是一个用来进行通信的协议即可。</p>
+<a id="more"></a>
+
+<ol>
+<li>协议版本和包名。<pre class="line-numbers language-go" data-language="go"><code class="language-go">syntax <span class="token operator">=</span> <span class="token string">"proto2"</span><span class="token punctuation">;</span>
+
+<span class="token keyword">package</span> groupcachepb<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre></li>
+<li>请求消息结构，两个字符串，分别为group和key，必须字段。<pre class="line-numbers language-go" data-language="go"><code class="language-go">message GetRequest <span class="token punctuation">&#123;</span>
+  required <span class="token builtin">string</span> group <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+  required <span class="token builtin">string</span> key <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre></li>
+<li>回复消息结构，[]byte和double类型，可选字段。<pre class="line-numbers language-go" data-language="go"><code class="language-go">message GetResponse <span class="token punctuation">&#123;</span>
+  optional bytes value <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+  optional double minute_qps <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre></li>
+<li>rpc服务定义，但是我貌似没有在代码中看到使用rpc的地方。<pre class="line-numbers language-go" data-language="go"><code class="language-go">service GroupCache <span class="token punctuation">&#123;</span>
+  rpc <span class="token function">Get</span><span class="token punctuation">(</span>GetRequest<span class="token punctuation">)</span> returns <span class="token punctuation">(</span>GetResponse<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+</ol>
+]]></content>
+      <categories>
+        <category>go</category>
+        <category>groupcache</category>
+      </categories>
+      <tags>
+        <tag>groupcache</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>groupcache源码分析3:lru.go</title>
-    <url>/2020/03/11/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%903/</url>
+    <url>/2020/03/11/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%903/</url>
     <content><![CDATA[<p>LRU算法全称Least Recently Used ，最近最少使用，当数据所占内存达到一定阈值，我们要移除掉最近最少使用的数据。</p>
 <a id="more"></a>
 
@@ -841,41 +923,8 @@ two...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></sp
       </tags>
   </entry>
   <entry>
-    <title>groupcache源码分析2:groupcachepb</title>
-    <url>/2020/03/10/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%902/</url>
-    <content><![CDATA[<p>groupcachepb打开后我们可以看到.proto文件和.pb.go文件，这玩意儿我们很熟悉，protobuf协议嘛，我们只需要关注.proto即可，.pb.go是基于他生成，关于protobuf的具体内容不详述，大家知道他是一个用来进行通信的协议即可。</p>
-<a id="more"></a>
-
-<ol>
-<li>协议版本和包名。<pre class="line-numbers language-go" data-language="go"><code class="language-go">syntax <span class="token operator">=</span> <span class="token string">"proto2"</span><span class="token punctuation">;</span>
-
-<span class="token keyword">package</span> groupcachepb<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre></li>
-<li>请求消息结构，两个字符串，分别为group和key，必须字段。<pre class="line-numbers language-go" data-language="go"><code class="language-go">message GetRequest <span class="token punctuation">&#123;</span>
-  required <span class="token builtin">string</span> group <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
-  required <span class="token builtin">string</span> key <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>
-<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre></li>
-<li>回复消息结构，[]byte和double类型，可选字段。<pre class="line-numbers language-go" data-language="go"><code class="language-go">message GetResponse <span class="token punctuation">&#123;</span>
-  optional bytes value <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
-  optional double minute_qps <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>
-<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre></li>
-<li>rpc服务定义，但是我貌似没有在代码中看到使用rpc的地方。<pre class="line-numbers language-go" data-language="go"><code class="language-go">service GroupCache <span class="token punctuation">&#123;</span>
-  rpc <span class="token function">Get</span><span class="token punctuation">(</span>GetRequest<span class="token punctuation">)</span> returns <span class="token punctuation">(</span>GetResponse<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
-  <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
-<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
-</li>
-</ol>
-]]></content>
-      <categories>
-        <category>go</category>
-        <category>groupcache</category>
-      </categories>
-      <tags>
-        <tag>groupcache</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>groupcache源码分析4:singleflight.go</title>
-    <url>/2020/03/14/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%904/</url>
+    <url>/2020/03/14/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%904/</url>
     <content><![CDATA[<p>singleflight.go文件代码不多，主要是提供了一个竞争执行方法，利用sync.WaitGroup来让重复的请求，进行等待，只实际执行一次，并将执行结果返回给所有等待的请求。算是一个并发的处理机制。</p>
 <a id="more"></a>
 
@@ -931,7 +980,7 @@ two...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></sp
   </entry>
   <entry>
     <title>groupcache源码分析5:byteview.go</title>
-    <url>/2020/03/15/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%905/</url>
+    <url>/2020/03/15/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%905/</url>
     <content><![CDATA[<p>byteview.go文件提供了一个数据结构ByteView，它是对[]byte或string类型的一个封装，提供了一些方法。</p>
 <a id="more"></a>
 
@@ -1089,7 +1138,7 @@ two...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></sp
   </entry>
   <entry>
     <title>groupcache源码分析6:sink.go</title>
-    <url>/2020/03/21/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%906/</url>
+    <url>/2020/03/21/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%906/</url>
     <content><![CDATA[<p>sink.go文件实际上也是提供数据结构，在ByteView之上做了一层封装。</p>
 <a id="more"></a>
 
@@ -1197,7 +1246,7 @@ two...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></sp
   </entry>
   <entry>
     <title>groupcache源码分析7:peers.go</title>
-    <url>/2020/03/22/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%907/</url>
+    <url>/2020/03/22/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%907/</url>
     <content><![CDATA[<p>peers.go文件的主要作用是用来定义如何查找和与其他peer沟通，peer的中文翻译为同伴，可以理解为其他机器。</p>
 <a id="more"></a>
 
@@ -1258,7 +1307,7 @@ two...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></sp
   </entry>
   <entry>
     <title>groupcache源码分析8:http.go</title>
-    <url>/2020/03/24/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%908/</url>
+    <url>/2020/03/24/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%908/</url>
     <content><![CDATA[<p>http.go定义了groupcache接收到http请求时怎么去执行操作，算是一个主要流程文件。</p>
 <a id="more"></a>
 
@@ -1452,218 +1501,8 @@ two...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></sp
       </tags>
   </entry>
   <entry>
-    <title>征服者：葡萄牙帝国的崛起</title>
-    <url>/2020/10/28/%E8%AF%BB%E4%B9%A6/11%E5%BE%81%E6%9C%8D%E8%80%85%EF%BC%9A%E8%91%A1%E8%90%84%E7%89%99%E5%B8%9D%E5%9B%BD%E7%9A%84%E5%B4%9B%E8%B5%B7/</url>
-    <content><![CDATA[<p>因为读这本书到完成这篇读后感中间隔了蛮久时间，发生了一些事情，那股新鲜感已经不在，加上书中内容颇杂，出场人物和事件过多，就大概写一点现在还有的感触吧。</p>
-<a id="more"></a>
-
-<p>这本书的契机是一次去书店闲逛，看到一本叫做《最后的十字军东征》的书，当年玩p社游戏，对这一段历史颇感兴趣。但实体书有点贵，没买。回来一搜，说大部分类容与《征服者：葡萄牙帝国的崛起》相同，且后者评分更高，趁着网上书店做活动入手了。</p>
-<p>前半部分印象比较深，尤其是恩里克、迪亚士、达伽马那一段关于印度航路的开拓史，解决了我心中的很多疑惑。欧洲为什么着了魔似的要开拓前往印度的航路，为什么香料对欧洲人有如此大的魔力。</p>
-<p>后半部分殖民地开拓史，大概只记得几位总督的不同行事风格，烧杀抢掠，然后不停修筑要塞了。</p>
-<p>资本的开拓史，是一部血腥史，是利益史，同样也是科技的进步史。</p>
-]]></content>
-      <categories>
-        <category>读书</category>
-      </categories>
-      <tags>
-        <tag>读书</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>被讨厌的勇气</title>
-    <url>/2020/08/08/%E8%AF%BB%E4%B9%A6/10%E8%A2%AB%E8%AE%A8%E5%8E%8C%E7%9A%84%E5%8B%87%E6%B0%94/</url>
-    <content><![CDATA[<p>久闻弗洛伊德大名，现在又知道了阿德勒。</p>
-<a id="more"></a>
-
-<p>日常中自己是个“原因论”信奉者，相信有因必有果。然而作者在一开始就抛出的“目的论”，实实在在是惊艳了我。“目的论”可以算作是“原因论”的一个逆向，刷新了我看待问题的方式。因为有这样的目的，所以我们才产生了相应的行为。基于此我们了解到，自卑等心理其实并不是我们真的不幸，而仅仅是为了达到自我保护的目的，因为这样我们可以更享受这种停滞不前的状态。自卑情结与优越情结存在密切联系，自负和夸耀不幸是两种表现形式，目的是为了证明自己的独特性。个人是可以改变的，但是这需要勇气。</p>
-<p>人的一切烦恼来自于人际关系。来自于工作、交友和爱这三大课题。竞争关系产生了胜者和败者，无法真心祝福是因为把别人的成功看作了自己的失败。</p>
-<p>我们不是为了别人的期待而活着，别人也不是为了满足你的期待而活。学会考虑课题分离。自由是具有被人讨厌的勇气。</p>
-<p>我们时刻处于多个共同体之中，在当前共同体中的烦恼可以通过倾听更大共同体来解决。不是干涉而是援助，拒绝表扬批评而是鼓励。人只有在能够感觉自己有价值的时候才可以获得勇气。人的存在本身会给别人带来价值。努力与别人建立横向关系，重要的是意识上的平等和坚持自己的主张。</p>
-<p>自我接纳，他者信赖，他者贡献。把对自己的执着变成对他人的关心。幸福就是贡献感。人生是刹那的连续，根本不存在过去和未来，认真地活在此时此刻。并不存在普遍性的人生意义，人生的意义是自己赋予自己的。</p>
-<p>总结：<br>自卑是普遍存在的一种人生常态，不可能事事如意，勇于被别人讨厌和自我接纳，并在更大共同体中寻求贡献感，努力活在当下，赋予自己的人生以意义。</p>
-<hr>
-<p>书摘</p>
-<blockquote>
-<p>青年自幼就缺乏自信，他对自己的出身、学历甚至容貌都抱有强烈的自卑感。也许是因为这样，他往往过于在意他人的目光；而且，他无法衷心地去祝福别人的幸福，从而常常陷入自我嫌恶的痛苦境地。</p>
-</blockquote>
-<blockquote>
-<p>任何经历本身并不是成功或者失败的原因。我们并非因为自身经历中的刺激——所谓的心理创伤——而痛苦，事实上我们会从经历中发现符合自己目的的因素。决定我们自身的不是过去的经历，而是我们自己赋予经历的意义。</p>
-</blockquote>
-<blockquote>
-<p>为什么那么急于得到答案呢？答案不应该是从别人那里得到，而应该是自己亲自找出来。从别人那里得到的答案只不过是对症疗法而已，没有什么价值。</p>
-</blockquote>
-<blockquote>
-<p>重要的不是被给予了什么，而是如何去利用被给予的东西。</p>
-</blockquote>
-<blockquote>
-<p>你在人生的某个阶段里选择了“不幸”。这既不是因为你生在了不幸的环境中，也不是因为你陷入了不幸的境地中，而是因为你认为“不幸”对你自身而言是一种“善”。</p>
-</blockquote>
-<blockquote>
-<p>要想改变生活方式需要很大的“勇气”。面对变化产生的“不安”与不变带来的“不满”，你一定是选择了后者。</p>
-</blockquote>
-<blockquote>
-<p>实际上，他是想通过不去比赛这一方式来保留一种“如果做的话我也可以”的可能性，即不愿出去被人评价，更不愿去面对因作品拙劣而落选的现实。</p>
-</blockquote>
-<blockquote>
-<p>阿德勒的目的论是说：“无论之前的人生发生过什么，都对今后的人生如何度过没有影响。”决定自己人生的是活在“此时此刻”的你自己。</p>
-</blockquote>
-<blockquote>
-<p>承认就是很了不起的态度。但是，请你不要忘记，在人际关系中根本不可能不受伤。只要涉入人际关系就会或大或小地受伤，也会伤害别人。阿德勒曾说“要想消除烦恼，只有一个人在宇宙中生存”。但是，那种事情根本就无法做到。</p>
-</blockquote>
-<blockquote>
-<p>之所以感觉孤独并不是因为只有你自己一个人，感觉自己被周围的他人、社会和共同体所疏远才会孤独。我们要想体会孤独也需要有他人的存在。也就是说，人只有在社会关系中才会成为“个人”。</p>
-</blockquote>
-<blockquote>
-<p>首先，人是作为一种无力的存在活在这个世界上。并且，人希望摆脱这种无力状态，继而就有了普遍欲求。阿德勒称其为“追求优越性”。</p>
-</blockquote>
-<blockquote>
-<p>这是一种通过把自卑感尖锐化来实现异常优越感的模式。具体就是指夸耀不幸。</p>
-</blockquote>
-<blockquote>
-<p>健全的自卑感不是来自与别人的比较，而是来自与“理想的自己”的比较。</p>
-</blockquote>
-<blockquote>
-<p>无法真心祝福过得幸福的他人”，那就是因为站在竞争的角度来考虑人际关系，把他人的幸福看作“我的失败”，所以才无法给予祝福。</p>
-</blockquote>
-<blockquote>
-<p>易怒的人并不是性情急躁，而是不了解发怒以外的有效交流工具。所以才会说“不由得发火”之类的话。这其实是在借助发怒来进行交流。</p>
-</blockquote>
-<blockquote>
-<p>关于权力之争，还有一点需要注意。那就是无论认为自己多么正确，也不要以此为理由去责难对方。这是很多人都容易陷落进去的人际关系圈套。</p>
-</blockquote>
-<blockquote>
-<p>因为不想失败，所以就不愿承认自己的错误，结果就会选择错误的道路。承认错误、赔礼道歉、退出权力之争，这些都不是“失败”。追求优越性并不是通过与他人的竞争来完成的。</p>
-</blockquote>
-<blockquote>
-<p>行为方面的目标有“自立”和“与社会和谐共处”这两点。而且，支撑这种行为的心理方面的目标是“我有能力”以及“人人都是我的伙伴”这两种意识。</p>
-</blockquote>
-<blockquote>
-<p>当人能够感觉到“与这个人在一起可以无拘无束”的时候，才能够体会到爱。既没有自卑感也不必炫耀优越性，能够保持一种平静而自然的状态。真正的爱应该是这样的。</p>
-</blockquote>
-<blockquote>
-<p>那就是，决定你的生活方式（人生状态）的不是其他任何人，而是你自己这一事实。</p>
-</blockquote>
-<blockquote>
-<p>在犹太教教义中有这么一句话：“倘若自己都不为自己活出自己的人生，那还有谁会为自己而活呢？”</p>
-</blockquote>
-<blockquote>
-<p>基本上，一切人际关系矛盾都起因于对别人的课题妄加干涉或者自己的课题被别人妄加干涉。只要能够进行课题分离，人际关系就会发生巨大改变。</p>
-</blockquote>
-<blockquote>
-<p>首先要思考一下“这是谁的课题”。然后进行课题分离——哪些是自己的课题，哪些是别人的课题，要冷静地划清界限。而且，不去干涉别人的课题也不让别人干涉自己的课题。这就是阿德勒心理学给出的具体而且有可能彻底改变人际关系烦恼的具有划时代意义的观点。</p>
-</blockquote>
-<blockquote>
-<p>选择了不自由生活方式的大人看着自由活在当下的年轻人就会批判其“享乐主义”。当然，这其实是为了让自己接受不自由生活而捏造出的一种人生谎言。选择了真正自由的大人就不会说这样的话，相反还会鼓励年轻人要勇于争取自由。</p>
-</blockquote>
-<blockquote>
-<p>不畏惧被人讨厌而是勇往直前，不随波逐流而是激流勇进，这才是对人而言的自由。</p>
-</blockquote>
-<blockquote>
-<p>把对自己的执著（self interest）变成对他人的关心（social interest）。</p>
-</blockquote>
-<blockquote>
-<p>在只关心“我”这个意义上来讲，是以自我为中心。你正因为不想被他人认为自己不好，所以才在意他人的视线。这不是对他人的关心，而是对自己的执著。</p>
-</blockquote>
-<blockquote>
-<p>这里有需要记住的行动原则。当我们在人际关系中遇到困难或者看不到出口的时候，首先应该考虑的是“倾听更大共同体的声音”这一原则。</p>
-</blockquote>
-<blockquote>
-<p>人怎样才能够获得“勇气”？阿德勒的见解是：人只有在能够感觉自己有价值的时候才可以获得勇气。</p>
-</blockquote>
-<blockquote>
-<p>而应不将自己的孩子跟任何人相比，就把他看作他自己，对他的存在心怀喜悦与感激，不要按照理想形象去扣分，而是从零起点出发。如果是这样的话，那就能够对“存在”本身表示感谢了。</p>
-</blockquote>
-<blockquote>
-<p>必须得有人开始。即使其他人不合作，那也跟你没关系。我的意见就是这样：应该由你来开始。不必去考虑他人是否合作。</p>
-</blockquote>
-<blockquote>
-<p>并不是说将任何人都变成朋友或者像对待朋友一样去对待每一个人，不是这样的，重要的是意识上的平等以及坚持自己应有的主张。</p>
-</blockquote>
-<blockquote>
-<p>悲伤的时候尽管悲伤就可以。因为，正是想要逃避痛苦或悲伤才不敢付诸行动，以至于与任何人都无法建立起深厚的关系。</p>
-</blockquote>
-<blockquote>
-<p>也就是说，要想获得归属感就必须把他人看作伙伴，而要做到视他人为伙伴就需要自我接纳和他者信赖。</p>
-</blockquote>
-<blockquote>
-<p>正因为接受了真实的自我——也就是“自我接纳”——才能够不惧背叛地做到“他者信赖”；而且，正因为对他人给予无条件的信赖并能够视他人为自己的伙伴，才能够做到“他者贡献”；同时，正因为对他人有所贡献，才能够体会到“我对他人有用”进而接受真实的自己，做到“自我接纳”。</p>
-</blockquote>
-<blockquote>
-<p>人际关系不顺利既不是因为口吃也不是因为脸红恐惧症，真正的问题在于无法做到自我接纳、他者信赖和他者贡献，却将焦点聚集到微不足道的一个方面并企图以此来评价整个世界。这就是缺乏人生和谐的错误生活方式。</p>
-</blockquote>
-<blockquote>
-<p>“因为工作忙，所以无暇顾及家庭。”但是，这其实是人生的谎言。只不过是以工作为借口来逃避其他责任。本来家务、育儿、交友或兴趣应该全都给予关心，阿德勒不认可任何一方面突出的生活方式。</p>
-</blockquote>
-<blockquote>
-<p>“工作”并不仅仅是指在公司上班。家庭里的工作、育儿、对地域社会的贡献、兴趣等，这一切都是“工作”，公司等只不过是一小部分而已。</p>
-</blockquote>
-<blockquote>
-<p>对人而言，最大的不幸就是不喜欢自己。对于这种现实，阿德勒准备了极其简单的回答——“我对共同体有益”或者“我对他人有用”这种想法就足以让人体会到自己的价值。</p>
-</blockquote>
-<blockquote>
-<p>判断你的贡献是否起作用的不是你，那是他人的课题，是你无法干涉的问题。是否真正作出了贡献，从原理上根本无从了解。也就是说，进行他者贡献时候的我们即使作出看不见的贡献，只要能够产生“我对他人有用”的主观感觉即“贡献感”也可以。</p>
-</blockquote>
-<blockquote>
-<p>通过认可欲求获得的贡献感没有自由。但我们人类是在选择自由的同时也在追求幸福。</p>
-</blockquote>
-<blockquote>
-<p>人只有在能够感觉到“我对别人有用”的时候才能体会到自己的价值。但是，这种贡献也可以通过看不见的形式实现。只要有“对别人有用”的主观感觉，即“贡献感”就可以。并且，哲人还得出了这样的结论：幸福就是“贡献感”。</p>
-</blockquote>
-<blockquote>
-<p>拒绝普通的你也许是把“普通”理解成了“无能”吧。普通并不等于无能，我们根本没必要特意炫耀自己的优越性。</p>
-</blockquote>
-<blockquote>
-<p>是“现在”这一刹那的连续。我们只能活在“此时此刻”，我们的人生只存在于刹那之中。</p>
-</blockquote>
-<blockquote>
-<p>人生就像是在每一个瞬间不停旋转起舞的连续的刹那。并且，暮然四顾时常常会惊觉：“已经来到这里了吗？”</p>
-</blockquote>
-<blockquote>
-<p>人生是连续的刹那，根本不存在过去和未来。你是想要通过关注过去或未来为自己寻找免罪符。过去发生了什么与你的“此时此刻”没有任何关系，未来会如何也不是“此时此刻”要考虑的问题。假如认真地活在“此时此刻”，那就根本不会说出那样的话。</p>
-</blockquote>
-<blockquote>
-<p>你自己的人生也同样。为遥远的将来设定一个目标，并认为现在是其准备阶段。一直想着“真正想做的是这样的事情，等时机到了就去做”，是一种拖延人生的生活方式。只要在拖延人生，我们就会无所进展，只能每天过着枯燥乏味的单调生活。因为在这种情况下，人就会认为“此时此刻”只是准备阶段和忍耐阶段。但是，为了遥远将来的考试而努力学习的“此时此刻”却是真实的存在。</p>
-</blockquote>
-<blockquote>
-<p>人生中最大的谎言就是不活在“此时此刻”。纠结过去、关注未来，把微弱而模糊的光打向人生整体，自认为看到了些什么。你之前就一直忽略“此时此刻”，只关注根本不存在的过去和未来。对自己的人生和无可替代的刹那撒了一个大大的谎言。</p>
-</blockquote>
-<blockquote>
-<p>再送给你一句阿德勒的话：“必须有人开始。即使别人不合作，那也与你无关。我的意见就是这样。应该由你开始，不用去考虑别人是否合作。”</p>
-</blockquote>
-]]></content>
-      <categories>
-        <category>读书</category>
-      </categories>
-      <tags>
-        <tag>读书</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>杀死一只知更鸟</title>
-    <url>/2020/11/01/%E8%AF%BB%E4%B9%A6/12%E6%9D%80%E6%AD%BB%E4%B8%80%E5%8F%AA%E7%9F%A5%E6%9B%B4%E9%B8%9F/</url>
-    <content><![CDATA[<p>书分成两部分，第一部分是我、杰姆、迪儿对怪人拉德利无比的好奇心引发的一系列探寻活动，并借此勾画了梅科姆镇风貌。第二部分是阿蒂克斯为黑人汤姆对白人的强奸案做辩护，而遭到其他白人谴责。在无罪证据明显的情况下，仍然输掉诉讼案，并遭到由厄尔报复。</p>
-<a id="more"></a>
-
-<p>在没有读本书的时候，自己已经在网上大致了解了相关故事内容，本以为是一场主要说律师辩护的小说，读完才发现其实这只占有很少的一部分。</p>
-<p>我想要用几个词来概括下全书的主题，它们分别是偏见、勇气、平等、群体、善良。</p>
-<p>偏见，怪人拉德利的故事贯穿全书始终，因为他始终不出门，所以小镇上关于他的谣言很多，小孩子怕他，不敢从他门前路过。而主角三人却因为强烈的好奇心，想要一探究竟，甚至于半夜闯入民宅差点遭遇枪击。</p>
-<p>勇气，美国是一个种族歧视很严重的社会，黑人地位低下，常遭遇不公正待遇。书中的汤姆在证据不充分的情况下被控告强奸白人的罪名。阿蒂克斯被指定为汤姆的辩护律师，在遭遇小镇市民、亲戚等的反对下，仍然力排众议，坚持为汤姆辩护。在斯库特为了维护父亲声誉而动手时，告诉她不要因为别人的挑衅而打架。在法庭上拆穿了由厄尔的谎言，却最终因为陪审团的决定而败诉。</p>
-<p>平等，书中想要宣扬的人类生而平等，不要因为肤色而遭受不公正对待。白人中也有败类，黑人中也不乏正直与良知。</p>
-<p>群体，陪审团制度中，其中的每一个人都是个普通人，基于良知的判断最后却给予了汤姆死刑的判决。人在群体中，会受到干扰，进而降低本身的理智。</p>
-<p>善良，最后在由厄尔的报复下救了孩子的是怪人拉德利，就像阿蒂克斯所说“斯库特，当你最终了解他们时，你会发现，大多数人都是好人”。</p>
-<p>归根结底这是一本有关于教养的书，告诉我们如何成为一个正直的人。</p>
-<p>等我以后有了小孩，我想我会陪他一起再读一读这本书的。</p>
-]]></content>
-      <categories>
-        <category>读书</category>
-      </categories>
-      <tags>
-        <tag>读书</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>groupcache源码分析9:groupcache.go</title>
-    <url>/2020/03/29/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%909/</url>
+    <url>/2020/03/29/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%909/</url>
     <content><![CDATA[<p>终于到了最后一个文件groupcache.go，跟项目同名，看着就知道它的重要性了。前面我们分析了那么多，这一篇就来看看如何利用那些零件，来具体去实现整个缓存逻辑。</p>
 <a id="more"></a>
 
@@ -2057,6 +1896,216 @@ two...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></sp
       </tags>
   </entry>
   <entry>
+    <title>被讨厌的勇气</title>
+    <url>/2020/08/08/%E8%AF%BB%E4%B9%A6/10%E8%A2%AB%E8%AE%A8%E5%8E%8C%E7%9A%84%E5%8B%87%E6%B0%94/</url>
+    <content><![CDATA[<p>久闻弗洛伊德大名，现在又知道了阿德勒。</p>
+<a id="more"></a>
+
+<p>日常中自己是个“原因论”信奉者，相信有因必有果。然而作者在一开始就抛出的“目的论”，实实在在是惊艳了我。“目的论”可以算作是“原因论”的一个逆向，刷新了我看待问题的方式。因为有这样的目的，所以我们才产生了相应的行为。基于此我们了解到，自卑等心理其实并不是我们真的不幸，而仅仅是为了达到自我保护的目的，因为这样我们可以更享受这种停滞不前的状态。自卑情结与优越情结存在密切联系，自负和夸耀不幸是两种表现形式，目的是为了证明自己的独特性。个人是可以改变的，但是这需要勇气。</p>
+<p>人的一切烦恼来自于人际关系。来自于工作、交友和爱这三大课题。竞争关系产生了胜者和败者，无法真心祝福是因为把别人的成功看作了自己的失败。</p>
+<p>我们不是为了别人的期待而活着，别人也不是为了满足你的期待而活。学会考虑课题分离。自由是具有被人讨厌的勇气。</p>
+<p>我们时刻处于多个共同体之中，在当前共同体中的烦恼可以通过倾听更大共同体来解决。不是干涉而是援助，拒绝表扬批评而是鼓励。人只有在能够感觉自己有价值的时候才可以获得勇气。人的存在本身会给别人带来价值。努力与别人建立横向关系，重要的是意识上的平等和坚持自己的主张。</p>
+<p>自我接纳，他者信赖，他者贡献。把对自己的执着变成对他人的关心。幸福就是贡献感。人生是刹那的连续，根本不存在过去和未来，认真地活在此时此刻。并不存在普遍性的人生意义，人生的意义是自己赋予自己的。</p>
+<p>总结：<br>自卑是普遍存在的一种人生常态，不可能事事如意，勇于被别人讨厌和自我接纳，并在更大共同体中寻求贡献感，努力活在当下，赋予自己的人生以意义。</p>
+<hr>
+<p>书摘</p>
+<blockquote>
+<p>青年自幼就缺乏自信，他对自己的出身、学历甚至容貌都抱有强烈的自卑感。也许是因为这样，他往往过于在意他人的目光；而且，他无法衷心地去祝福别人的幸福，从而常常陷入自我嫌恶的痛苦境地。</p>
+</blockquote>
+<blockquote>
+<p>任何经历本身并不是成功或者失败的原因。我们并非因为自身经历中的刺激——所谓的心理创伤——而痛苦，事实上我们会从经历中发现符合自己目的的因素。决定我们自身的不是过去的经历，而是我们自己赋予经历的意义。</p>
+</blockquote>
+<blockquote>
+<p>为什么那么急于得到答案呢？答案不应该是从别人那里得到，而应该是自己亲自找出来。从别人那里得到的答案只不过是对症疗法而已，没有什么价值。</p>
+</blockquote>
+<blockquote>
+<p>重要的不是被给予了什么，而是如何去利用被给予的东西。</p>
+</blockquote>
+<blockquote>
+<p>你在人生的某个阶段里选择了“不幸”。这既不是因为你生在了不幸的环境中，也不是因为你陷入了不幸的境地中，而是因为你认为“不幸”对你自身而言是一种“善”。</p>
+</blockquote>
+<blockquote>
+<p>要想改变生活方式需要很大的“勇气”。面对变化产生的“不安”与不变带来的“不满”，你一定是选择了后者。</p>
+</blockquote>
+<blockquote>
+<p>实际上，他是想通过不去比赛这一方式来保留一种“如果做的话我也可以”的可能性，即不愿出去被人评价，更不愿去面对因作品拙劣而落选的现实。</p>
+</blockquote>
+<blockquote>
+<p>阿德勒的目的论是说：“无论之前的人生发生过什么，都对今后的人生如何度过没有影响。”决定自己人生的是活在“此时此刻”的你自己。</p>
+</blockquote>
+<blockquote>
+<p>承认就是很了不起的态度。但是，请你不要忘记，在人际关系中根本不可能不受伤。只要涉入人际关系就会或大或小地受伤，也会伤害别人。阿德勒曾说“要想消除烦恼，只有一个人在宇宙中生存”。但是，那种事情根本就无法做到。</p>
+</blockquote>
+<blockquote>
+<p>之所以感觉孤独并不是因为只有你自己一个人，感觉自己被周围的他人、社会和共同体所疏远才会孤独。我们要想体会孤独也需要有他人的存在。也就是说，人只有在社会关系中才会成为“个人”。</p>
+</blockquote>
+<blockquote>
+<p>首先，人是作为一种无力的存在活在这个世界上。并且，人希望摆脱这种无力状态，继而就有了普遍欲求。阿德勒称其为“追求优越性”。</p>
+</blockquote>
+<blockquote>
+<p>这是一种通过把自卑感尖锐化来实现异常优越感的模式。具体就是指夸耀不幸。</p>
+</blockquote>
+<blockquote>
+<p>健全的自卑感不是来自与别人的比较，而是来自与“理想的自己”的比较。</p>
+</blockquote>
+<blockquote>
+<p>无法真心祝福过得幸福的他人”，那就是因为站在竞争的角度来考虑人际关系，把他人的幸福看作“我的失败”，所以才无法给予祝福。</p>
+</blockquote>
+<blockquote>
+<p>易怒的人并不是性情急躁，而是不了解发怒以外的有效交流工具。所以才会说“不由得发火”之类的话。这其实是在借助发怒来进行交流。</p>
+</blockquote>
+<blockquote>
+<p>关于权力之争，还有一点需要注意。那就是无论认为自己多么正确，也不要以此为理由去责难对方。这是很多人都容易陷落进去的人际关系圈套。</p>
+</blockquote>
+<blockquote>
+<p>因为不想失败，所以就不愿承认自己的错误，结果就会选择错误的道路。承认错误、赔礼道歉、退出权力之争，这些都不是“失败”。追求优越性并不是通过与他人的竞争来完成的。</p>
+</blockquote>
+<blockquote>
+<p>行为方面的目标有“自立”和“与社会和谐共处”这两点。而且，支撑这种行为的心理方面的目标是“我有能力”以及“人人都是我的伙伴”这两种意识。</p>
+</blockquote>
+<blockquote>
+<p>当人能够感觉到“与这个人在一起可以无拘无束”的时候，才能够体会到爱。既没有自卑感也不必炫耀优越性，能够保持一种平静而自然的状态。真正的爱应该是这样的。</p>
+</blockquote>
+<blockquote>
+<p>那就是，决定你的生活方式（人生状态）的不是其他任何人，而是你自己这一事实。</p>
+</blockquote>
+<blockquote>
+<p>在犹太教教义中有这么一句话：“倘若自己都不为自己活出自己的人生，那还有谁会为自己而活呢？”</p>
+</blockquote>
+<blockquote>
+<p>基本上，一切人际关系矛盾都起因于对别人的课题妄加干涉或者自己的课题被别人妄加干涉。只要能够进行课题分离，人际关系就会发生巨大改变。</p>
+</blockquote>
+<blockquote>
+<p>首先要思考一下“这是谁的课题”。然后进行课题分离——哪些是自己的课题，哪些是别人的课题，要冷静地划清界限。而且，不去干涉别人的课题也不让别人干涉自己的课题。这就是阿德勒心理学给出的具体而且有可能彻底改变人际关系烦恼的具有划时代意义的观点。</p>
+</blockquote>
+<blockquote>
+<p>选择了不自由生活方式的大人看着自由活在当下的年轻人就会批判其“享乐主义”。当然，这其实是为了让自己接受不自由生活而捏造出的一种人生谎言。选择了真正自由的大人就不会说这样的话，相反还会鼓励年轻人要勇于争取自由。</p>
+</blockquote>
+<blockquote>
+<p>不畏惧被人讨厌而是勇往直前，不随波逐流而是激流勇进，这才是对人而言的自由。</p>
+</blockquote>
+<blockquote>
+<p>把对自己的执著（self interest）变成对他人的关心（social interest）。</p>
+</blockquote>
+<blockquote>
+<p>在只关心“我”这个意义上来讲，是以自我为中心。你正因为不想被他人认为自己不好，所以才在意他人的视线。这不是对他人的关心，而是对自己的执著。</p>
+</blockquote>
+<blockquote>
+<p>这里有需要记住的行动原则。当我们在人际关系中遇到困难或者看不到出口的时候，首先应该考虑的是“倾听更大共同体的声音”这一原则。</p>
+</blockquote>
+<blockquote>
+<p>人怎样才能够获得“勇气”？阿德勒的见解是：人只有在能够感觉自己有价值的时候才可以获得勇气。</p>
+</blockquote>
+<blockquote>
+<p>而应不将自己的孩子跟任何人相比，就把他看作他自己，对他的存在心怀喜悦与感激，不要按照理想形象去扣分，而是从零起点出发。如果是这样的话，那就能够对“存在”本身表示感谢了。</p>
+</blockquote>
+<blockquote>
+<p>必须得有人开始。即使其他人不合作，那也跟你没关系。我的意见就是这样：应该由你来开始。不必去考虑他人是否合作。</p>
+</blockquote>
+<blockquote>
+<p>并不是说将任何人都变成朋友或者像对待朋友一样去对待每一个人，不是这样的，重要的是意识上的平等以及坚持自己应有的主张。</p>
+</blockquote>
+<blockquote>
+<p>悲伤的时候尽管悲伤就可以。因为，正是想要逃避痛苦或悲伤才不敢付诸行动，以至于与任何人都无法建立起深厚的关系。</p>
+</blockquote>
+<blockquote>
+<p>也就是说，要想获得归属感就必须把他人看作伙伴，而要做到视他人为伙伴就需要自我接纳和他者信赖。</p>
+</blockquote>
+<blockquote>
+<p>正因为接受了真实的自我——也就是“自我接纳”——才能够不惧背叛地做到“他者信赖”；而且，正因为对他人给予无条件的信赖并能够视他人为自己的伙伴，才能够做到“他者贡献”；同时，正因为对他人有所贡献，才能够体会到“我对他人有用”进而接受真实的自己，做到“自我接纳”。</p>
+</blockquote>
+<blockquote>
+<p>人际关系不顺利既不是因为口吃也不是因为脸红恐惧症，真正的问题在于无法做到自我接纳、他者信赖和他者贡献，却将焦点聚集到微不足道的一个方面并企图以此来评价整个世界。这就是缺乏人生和谐的错误生活方式。</p>
+</blockquote>
+<blockquote>
+<p>“因为工作忙，所以无暇顾及家庭。”但是，这其实是人生的谎言。只不过是以工作为借口来逃避其他责任。本来家务、育儿、交友或兴趣应该全都给予关心，阿德勒不认可任何一方面突出的生活方式。</p>
+</blockquote>
+<blockquote>
+<p>“工作”并不仅仅是指在公司上班。家庭里的工作、育儿、对地域社会的贡献、兴趣等，这一切都是“工作”，公司等只不过是一小部分而已。</p>
+</blockquote>
+<blockquote>
+<p>对人而言，最大的不幸就是不喜欢自己。对于这种现实，阿德勒准备了极其简单的回答——“我对共同体有益”或者“我对他人有用”这种想法就足以让人体会到自己的价值。</p>
+</blockquote>
+<blockquote>
+<p>判断你的贡献是否起作用的不是你，那是他人的课题，是你无法干涉的问题。是否真正作出了贡献，从原理上根本无从了解。也就是说，进行他者贡献时候的我们即使作出看不见的贡献，只要能够产生“我对他人有用”的主观感觉即“贡献感”也可以。</p>
+</blockquote>
+<blockquote>
+<p>通过认可欲求获得的贡献感没有自由。但我们人类是在选择自由的同时也在追求幸福。</p>
+</blockquote>
+<blockquote>
+<p>人只有在能够感觉到“我对别人有用”的时候才能体会到自己的价值。但是，这种贡献也可以通过看不见的形式实现。只要有“对别人有用”的主观感觉，即“贡献感”就可以。并且，哲人还得出了这样的结论：幸福就是“贡献感”。</p>
+</blockquote>
+<blockquote>
+<p>拒绝普通的你也许是把“普通”理解成了“无能”吧。普通并不等于无能，我们根本没必要特意炫耀自己的优越性。</p>
+</blockquote>
+<blockquote>
+<p>是“现在”这一刹那的连续。我们只能活在“此时此刻”，我们的人生只存在于刹那之中。</p>
+</blockquote>
+<blockquote>
+<p>人生就像是在每一个瞬间不停旋转起舞的连续的刹那。并且，暮然四顾时常常会惊觉：“已经来到这里了吗？”</p>
+</blockquote>
+<blockquote>
+<p>人生是连续的刹那，根本不存在过去和未来。你是想要通过关注过去或未来为自己寻找免罪符。过去发生了什么与你的“此时此刻”没有任何关系，未来会如何也不是“此时此刻”要考虑的问题。假如认真地活在“此时此刻”，那就根本不会说出那样的话。</p>
+</blockquote>
+<blockquote>
+<p>你自己的人生也同样。为遥远的将来设定一个目标，并认为现在是其准备阶段。一直想着“真正想做的是这样的事情，等时机到了就去做”，是一种拖延人生的生活方式。只要在拖延人生，我们就会无所进展，只能每天过着枯燥乏味的单调生活。因为在这种情况下，人就会认为“此时此刻”只是准备阶段和忍耐阶段。但是，为了遥远将来的考试而努力学习的“此时此刻”却是真实的存在。</p>
+</blockquote>
+<blockquote>
+<p>人生中最大的谎言就是不活在“此时此刻”。纠结过去、关注未来，把微弱而模糊的光打向人生整体，自认为看到了些什么。你之前就一直忽略“此时此刻”，只关注根本不存在的过去和未来。对自己的人生和无可替代的刹那撒了一个大大的谎言。</p>
+</blockquote>
+<blockquote>
+<p>再送给你一句阿德勒的话：“必须有人开始。即使别人不合作，那也与你无关。我的意见就是这样。应该由你开始，不用去考虑别人是否合作。”</p>
+</blockquote>
+]]></content>
+      <categories>
+        <category>读书</category>
+      </categories>
+      <tags>
+        <tag>读书</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>征服者：葡萄牙帝国的崛起</title>
+    <url>/2020/10/28/%E8%AF%BB%E4%B9%A6/11%E5%BE%81%E6%9C%8D%E8%80%85%EF%BC%9A%E8%91%A1%E8%90%84%E7%89%99%E5%B8%9D%E5%9B%BD%E7%9A%84%E5%B4%9B%E8%B5%B7/</url>
+    <content><![CDATA[<p>因为读这本书到完成这篇读后感中间隔了蛮久时间，发生了一些事情，那股新鲜感已经不在，加上书中内容颇杂，出场人物和事件过多，就大概写一点现在还有的感触吧。</p>
+<a id="more"></a>
+
+<p>这本书的契机是一次去书店闲逛，看到一本叫做《最后的十字军东征》的书，当年玩p社游戏，对这一段历史颇感兴趣。但实体书有点贵，没买。回来一搜，说大部分类容与《征服者：葡萄牙帝国的崛起》相同，且后者评分更高，趁着网上书店做活动入手了。</p>
+<p>前半部分印象比较深，尤其是恩里克、迪亚士、达伽马那一段关于印度航路的开拓史，解决了我心中的很多疑惑。欧洲为什么着了魔似的要开拓前往印度的航路，为什么香料对欧洲人有如此大的魔力。</p>
+<p>后半部分殖民地开拓史，大概只记得几位总督的不同行事风格，烧杀抢掠，然后不停修筑要塞了。</p>
+<p>资本的开拓史，是一部血腥史，是利益史，同样也是科技的进步史。</p>
+]]></content>
+      <categories>
+        <category>读书</category>
+      </categories>
+      <tags>
+        <tag>读书</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>杀死一只知更鸟</title>
+    <url>/2020/11/01/%E8%AF%BB%E4%B9%A6/12%E6%9D%80%E6%AD%BB%E4%B8%80%E5%8F%AA%E7%9F%A5%E6%9B%B4%E9%B8%9F/</url>
+    <content><![CDATA[<p>书分成两部分，第一部分是我、杰姆、迪儿对怪人拉德利无比的好奇心引发的一系列探寻活动，并借此勾画了梅科姆镇风貌。第二部分是阿蒂克斯为黑人汤姆对白人的强奸案做辩护，而遭到其他白人谴责。在无罪证据明显的情况下，仍然输掉诉讼案，并遭到由厄尔报复。</p>
+<a id="more"></a>
+
+<p>在没有读本书的时候，自己已经在网上大致了解了相关故事内容，本以为是一场主要说律师辩护的小说，读完才发现其实这只占有很少的一部分。</p>
+<p>我想要用几个词来概括下全书的主题，它们分别是偏见、勇气、平等、群体、善良。</p>
+<p>偏见，怪人拉德利的故事贯穿全书始终，因为他始终不出门，所以小镇上关于他的谣言很多，小孩子怕他，不敢从他门前路过。而主角三人却因为强烈的好奇心，想要一探究竟，甚至于半夜闯入民宅差点遭遇枪击。</p>
+<p>勇气，美国是一个种族歧视很严重的社会，黑人地位低下，常遭遇不公正待遇。书中的汤姆在证据不充分的情况下被控告强奸白人的罪名。阿蒂克斯被指定为汤姆的辩护律师，在遭遇小镇市民、亲戚等的反对下，仍然力排众议，坚持为汤姆辩护。在斯库特为了维护父亲声誉而动手时，告诉她不要因为别人的挑衅而打架。在法庭上拆穿了由厄尔的谎言，却最终因为陪审团的决定而败诉。</p>
+<p>平等，书中想要宣扬的人类生而平等，不要因为肤色而遭受不公正对待。白人中也有败类，黑人中也不乏正直与良知。</p>
+<p>群体，陪审团制度中，其中的每一个人都是个普通人，基于良知的判断最后却给予了汤姆死刑的判决。人在群体中，会受到干扰，进而降低本身的理智。</p>
+<p>善良，最后在由厄尔的报复下救了孩子的是怪人拉德利，就像阿蒂克斯所说“斯库特，当你最终了解他们时，你会发现，大多数人都是好人”。</p>
+<p>归根结底这是一本有关于教养的书，告诉我们如何成为一个正直的人。</p>
+<p>等我以后有了小孩，我想我会陪他一起再读一读这本书的。</p>
+]]></content>
+      <categories>
+        <category>读书</category>
+      </categories>
+      <tags>
+        <tag>读书</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>岛上书店</title>
     <url>/2020/11/25/%E8%AF%BB%E4%B9%A6/13%E5%B2%9B%E4%B8%8A%E4%B9%A6%E5%BA%97/</url>
     <content><![CDATA[<p>“没有谁是一座孤岛，每本书都是一个世界。”</p>
@@ -2420,22 +2469,6 @@ two...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></sp
       </tags>
   </entry>
   <entry>
-    <title>生活蒙太奇</title>
-    <url>/2021/07/11/%E8%AF%BB%E4%B9%A6/24%E7%94%9F%E6%B4%BB%E8%92%99%E5%A4%AA%E5%A5%87/</url>
-    <content><![CDATA[<p>总感觉工作之后就很难有天马行空的想象了，或许是生活琐事太多，让自己无暇顾及。</p>
-<a id="more"></a>
-
-<p>但有时确实需要沉下心来，静静地，暂时忘记一些关于钱财、房子之类的烦恼。</p>
-<p>任思绪飘零一下，发现生活中不一样的美好。</p>
-]]></content>
-      <categories>
-        <category>读书</category>
-      </categories>
-      <tags>
-        <tag>读书</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>三行情书</title>
     <url>/2021/06/15/%E8%AF%BB%E4%B9%A6/23%E4%B8%89%E8%A1%8C%E6%83%85%E4%B9%A6/</url>
     <content><![CDATA[<p>三行情书起源于日本，第一次听说应该是高中时看新闻联播，上面播报日本举办活动，才了解到这样一种诗歌体裁。</p>
@@ -2474,6 +2507,22 @@ two...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></sp
 <blockquote>
 <p>写信给爸爸，<br>却不知写什么才好，<br>最后写了“家里的猫，还好么？”</p>
 </blockquote>
+]]></content>
+      <categories>
+        <category>读书</category>
+      </categories>
+      <tags>
+        <tag>读书</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>生活蒙太奇</title>
+    <url>/2021/07/11/%E8%AF%BB%E4%B9%A6/24%E7%94%9F%E6%B4%BB%E8%92%99%E5%A4%AA%E5%A5%87/</url>
+    <content><![CDATA[<p>总感觉工作之后就很难有天马行空的想象了，或许是生活琐事太多，让自己无暇顾及。</p>
+<a id="more"></a>
+
+<p>但有时确实需要沉下心来，静静地，暂时忘记一些关于钱财、房子之类的烦恼。</p>
+<p>任思绪飘零一下，发现生活中不一样的美好。</p>
 ]]></content>
       <categories>
         <category>读书</category>
@@ -2671,22 +2720,6 @@ two...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></sp
       </tags>
   </entry>
   <entry>
-    <title>长安的荔枝</title>
-    <url>/2022/10/12/%E8%AF%BB%E4%B9%A6/34%E9%95%BF%E5%AE%89%E7%9A%84%E8%8D%94%E6%9E%9D/</url>
-    <content><![CDATA[<p>“一骑红尘妃子笑，无人知是荔枝来”。</p>
-<a id="more"></a>
-
-<p>以这句诗拓展出来的一个小故事，剧情还算完整。也因为诗的广为人知，而让人觉得新颖，但文笔和故事性欠佳。</p>
-<p>倘若因神作榜而来，或许会失望了。</p>
-]]></content>
-      <categories>
-        <category>读书</category>
-      </categories>
-      <tags>
-        <tag>读书</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>房思琪的初恋乐园</title>
     <url>/2022/04/21/%E8%AF%BB%E4%B9%A6/33%E6%88%BF%E6%80%9D%E7%90%AA%E7%9A%84%E5%88%9D%E6%81%8B%E4%B9%90%E5%9B%AD/</url>
     <content><![CDATA[<p>写这样的一篇读后感，注定是很艰难的事，因为需要重新代入房思琪的经历，可我却不想再经历一次这样的过程了。甜建议我看林奕含的采访，同样因为这个原因我没有行动。</p>
@@ -2703,6 +2736,42 @@ two...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></sp
 <p>怡婷一直对思琪跟李国华走的很近甚是嫉妒，一开始我以为是“汝之蜜糖，彼之砒霜”式的妒忌心和无知者式的愚昧。看到最后才明白，或许最初是两个少女对文学名师的憧憬，但到后来其实是对思琪离自己越来越远，对李国华让自己失去好友的嫉妒。也为友谊而不是怒火中烧带来的一抹亮色而感到欣慰。</p>
 <p>写到最后，我想到了《洛丽塔》，如果不是因为知道这是真实事件，那么这本书或许是一本很好的虚构文学。</p>
 <p>但很可惜的是：房思琪疯了，林奕含死了，李国华仍然逍遥法外。</p>
+]]></content>
+      <categories>
+        <category>读书</category>
+      </categories>
+      <tags>
+        <tag>读书</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>长安的荔枝</title>
+    <url>/2022/10/12/%E8%AF%BB%E4%B9%A6/34%E9%95%BF%E5%AE%89%E7%9A%84%E8%8D%94%E6%9E%9D/</url>
+    <content><![CDATA[<p>“一骑红尘妃子笑，无人知是荔枝来”。</p>
+<a id="more"></a>
+
+<p>以这句诗拓展出来的一个小故事，剧情还算完整。也因为诗的广为人知，而让人觉得新颖，但文笔和故事性欠佳。</p>
+<p>倘若因神作榜而来，或许会失望了。</p>
+]]></content>
+      <categories>
+        <category>读书</category>
+      </categories>
+      <tags>
+        <tag>读书</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>水浒传</title>
+    <url>/2024/05/25/%E8%AF%BB%E4%B9%A6/35%E6%B0%B4%E6%B5%92%E4%BC%A0/</url>
+    <content><![CDATA[<p>第一次读《水浒传》，应该是上初中，那时候电视上正在播李雪健主演的电视剧，播到“三打祝家庄”。恰好家里有一本借来的书，于是就着电视剧热映，读了一半，当时还没那么喜欢，没等到读完就到了归还的日期了。</p>
+<a id="more"></a>
+<p>再见面是在高中课本上，“风雪山神庙”和“智取生辰纲”，尤其向往林冲裹着棉被在庙里吃熟牛肉喝冷酒的场景。</p>
+<p>几年前重新翻开《水浒传》，读到宋江蒙九天玄女授天书三卷，因为实在是对宋江喜欢不起来，再次作罢。</p>
+<p>这些年，电视剧已经反复看过无数遍。但情节删减始终觉得不过瘾，于是又把原著找了出来。</p>
+<p>距离初读水浒，已经过了十几年，这一次，终于耐着性子读完了。</p>
+<p>读完后拖着一个多月了，也没写感想。</p>
+<p>因为要给水浒传写评价，实在是极难的。想写点啥，可觉得实在不够能力点评这本名著。</p>
+<p>所记住的唯有“生熟牛肉,肥鹅嫩鸡”和“吃的口滑，止不住要吃”，不得不佩服施公写作手法之高超而已。</p>
 ]]></content>
       <categories>
         <category>读书</category>
@@ -2847,30 +2916,6 @@ two...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></sp
       </tags>
   </entry>
   <entry>
-    <title>俗世奇人：足本</title>
-    <url>/2020/06/06/%E8%AF%BB%E4%B9%A6/7%E4%BF%97%E4%B8%96%E5%A5%87%E4%BA%BA%EF%BC%9A%E8%B6%B3%E6%9C%AC/</url>
-    <content><![CDATA[<p>对冯骥才的认识来源于中学课本，印象很深的是他写的《珍珠鸟》，开头和结尾至今都还记得，本书中的“刷子李”和“泥人张”也入选过。</p>
-<a id="more"></a>
-
-<p>全书36个外号，对应36个故事，发生地点都在天津卫。阅读过程中，不时让我想起小时候读的《故事会》杂志。闲来无事，一天读几篇，很快就读完了。</p>
-<p>里面满满的天津腔，“这嘛那嘛”，颇接地气。</p>
-<hr>
-<p>书摘</p>
-<blockquote>
-<p>有第一，没第二，第三差着十万八千里。</p>
-</blockquote>
-<blockquote>
-<p>人世间最吃得开的有四大样：钱、权、爹、长相。有钱通神，有权比神还顶用，有好爹就是有靠山，长相俊招得人见人爱。可是单这些还不行。有钱有权还得会使，有爹有长相还得会用，这里边有一件要紧的东西不能缺——好法儿。</p>
-</blockquote>
-]]></content>
-      <categories>
-        <category>读书</category>
-      </categories>
-      <tags>
-        <tag>读书</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>人类简史：从动物到上帝</title>
     <url>/2020/05/31/%E8%AF%BB%E4%B9%A6/6%E4%BA%BA%E7%B1%BB%E7%AE%80%E5%8F%B2%EF%BC%9A%E4%BB%8E%E5%8A%A8%E7%89%A9%E5%88%B0%E4%B8%8A%E5%B8%9D/</url>
     <content><![CDATA[<p>大概记了一下每章内容：<br>1.约七万年前，智人从东非迁移，造成其他人类物种的灭绝。<br>2.智人语言更为灵活，组合后包含更多的信息。八卦传达大量社会关系的信息。智人语言具有虚构的能力。</p>
@@ -2946,6 +2991,30 @@ two...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></sp
 </blockquote>
 <blockquote>
 <p>核子末日的威胁促进了和平主义；和平主义大行其道，于是战争退散、贸易兴旺；贸易成长，也就让和平的利润更高，而战争的成本也更高。随着时间过去，这个良性循环也就对战争造成另一个阻碍，而且可能最后看来会是最重要的阻碍：因为国际网络日渐紧密，使得多数国家无法再维持全然独立，所以其中任何一国片面宣战的机会也就大幅降低。</p>
+</blockquote>
+]]></content>
+      <categories>
+        <category>读书</category>
+      </categories>
+      <tags>
+        <tag>读书</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>俗世奇人：足本</title>
+    <url>/2020/06/06/%E8%AF%BB%E4%B9%A6/7%E4%BF%97%E4%B8%96%E5%A5%87%E4%BA%BA%EF%BC%9A%E8%B6%B3%E6%9C%AC/</url>
+    <content><![CDATA[<p>对冯骥才的认识来源于中学课本，印象很深的是他写的《珍珠鸟》，开头和结尾至今都还记得，本书中的“刷子李”和“泥人张”也入选过。</p>
+<a id="more"></a>
+
+<p>全书36个外号，对应36个故事，发生地点都在天津卫。阅读过程中，不时让我想起小时候读的《故事会》杂志。闲来无事，一天读几篇，很快就读完了。</p>
+<p>里面满满的天津腔，“这嘛那嘛”，颇接地气。</p>
+<hr>
+<p>书摘</p>
+<blockquote>
+<p>有第一，没第二，第三差着十万八千里。</p>
+</blockquote>
+<blockquote>
+<p>人世间最吃得开的有四大样：钱、权、爹、长相。有钱通神，有权比神还顶用，有好爹就是有靠山，长相俊招得人见人爱。可是单这些还不行。有钱有权还得会使，有爹有长相还得会用，这里边有一件要紧的东西不能缺——好法儿。</p>
 </blockquote>
 ]]></content>
       <categories>
@@ -3102,26 +3171,6 @@ two...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></sp
 <blockquote>
 <p>不管身份的焦虑如何令人不快，但我们还是很难想象一种完全摆脱身份焦虑的美好生活，因为一个人对失败和在他人面前丢脸的恐惧，实际上意味着他抱有一定的追求，期待某些结果的出现，以及对自己以外的其他人心怀尊敬。身份的焦虑是我们承认在成功生活和不成功生活之间存在公共差异的时候，必须付出的代价。</p>
 </blockquote>
-]]></content>
-      <categories>
-        <category>读书</category>
-      </categories>
-      <tags>
-        <tag>读书</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>水浒传</title>
-    <url>/2024/05/25/%E8%AF%BB%E4%B9%A6/35%E6%B0%B4%E6%B5%92%E4%BC%A0/</url>
-    <content><![CDATA[<p>第一次读《水浒传》，应该是上初中，那时候电视上正在播李雪健主演的电视剧，播到“三打祝家庄”。恰好家里有一本借来的书，于是就着电视剧热映，读了一半，当时还没那么喜欢，没等到读完就到了归还的日期了。</p>
-<a id="more"></a>
-<p>再见面是在高中课本上，“风雪山神庙”和“智取生辰纲”，尤其向往林冲裹着棉被在庙里吃熟牛肉喝冷酒的场景。</p>
-<p>几年前重新翻开《水浒传》，读到宋江蒙九天玄女授天书三卷，因为实在是对宋江喜欢不起来，再次作罢。</p>
-<p>这些年，电视剧已经反复看过无数遍。但情节删减始终觉得不过瘾，于是又把原著找了出来。</p>
-<p>距离初读水浒，已经过了十几年，这一次，终于耐着性子读完了。</p>
-<p>读完后拖着一个多月了，也没写感想。</p>
-<p>因为要给水浒传写评价，实在是极难的。想写点啥，可觉得实在不够能力点评这本名著。</p>
-<p>所记住的唯有“生熟牛肉,肥鹅嫩鸡”和“吃的口滑，止不住要吃”，不得不佩服施公写作手法之高超而已。</p>
 ]]></content>
       <categories>
         <category>读书</category>

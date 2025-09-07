@@ -209,20 +209,20 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">50</span>
+          <span class="site-state-item-count">51</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">5</span>
+        <span class="site-state-item-count">7</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-count">5</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -251,6 +251,97 @@
 
 
     <div class="main-inner index posts-expand">
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2020/03/29/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%909/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Eric Luj">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="EricLuj的博客">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2020/03/29/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%909/" class="post-title-link" itemprop="url">groupcache源码分析9:groupcache.go</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-03-29 21:34:37" itemprop="dateCreated datePublished" datetime="2020-03-29T21:34:37+08:00">2020-03-29</time>
+    </span>
+      <span class="post-meta-item">
+        <span class="post-meta-item-icon">
+          <i class="far fa-calendar-check"></i>
+        </span>
+        <span class="post-meta-item-text">更新于</span>
+        <time title="修改时间：2020-11-25 22:24:23" itemprop="dateModified" datetime="2020-11-25T22:24:23+08:00">2020-11-25</time>
+      </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/go/" itemprop="url" rel="index"><span itemprop="name">go</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/go/groupcache/" itemprop="url" rel="index"><span itemprop="name">groupcache</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>终于到了最后一个文件groupcache.go，跟项目同名，看着就知道它的重要性了。前面我们分析了那么多，这一篇就来看看如何利用那些零件，来具体去实现整个缓存逻辑。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2020/03/29/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%909/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
 
     
 
@@ -347,7 +438,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2020/03/24/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%908/">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2020/03/24/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%908/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -360,7 +451,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/2020/03/24/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%908/" class="post-title-link" itemprop="url">groupcache源码分析8:http.go</a>
+          <a href="/2020/03/24/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%908/" class="post-title-link" itemprop="url">groupcache源码分析8:http.go</a>
         </h2>
 
         <div class="post-meta-container">
@@ -407,7 +498,7 @@
           <p>http.go定义了groupcache接收到http请求时怎么去执行操作，算是一个主要流程文件。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/2020/03/24/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%908/#more" rel="contents">
+              <a class="btn" href="/2020/03/24/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%908/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -438,7 +529,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2020/03/22/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%907/">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2020/03/22/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%907/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -451,7 +542,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/2020/03/22/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%907/" class="post-title-link" itemprop="url">groupcache源码分析7:peers.go</a>
+          <a href="/2020/03/22/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%907/" class="post-title-link" itemprop="url">groupcache源码分析7:peers.go</a>
         </h2>
 
         <div class="post-meta-container">
@@ -498,7 +589,7 @@
           <p>peers.go文件的主要作用是用来定义如何查找和与其他peer沟通，peer的中文翻译为同伴，可以理解为其他机器。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/2020/03/22/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%907/#more" rel="contents">
+              <a class="btn" href="/2020/03/22/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%907/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -529,7 +620,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2020/03/21/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%906/">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2020/03/21/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%906/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -542,7 +633,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/2020/03/21/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%906/" class="post-title-link" itemprop="url">groupcache源码分析6:sink.go</a>
+          <a href="/2020/03/21/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%906/" class="post-title-link" itemprop="url">groupcache源码分析6:sink.go</a>
         </h2>
 
         <div class="post-meta-container">
@@ -589,7 +680,7 @@
           <p>sink.go文件实际上也是提供数据结构，在ByteView之上做了一层封装。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/2020/03/21/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%906/#more" rel="contents">
+              <a class="btn" href="/2020/03/21/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%906/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -620,7 +711,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2020/03/15/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%905/">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2020/03/15/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%905/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -633,7 +724,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/2020/03/15/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%905/" class="post-title-link" itemprop="url">groupcache源码分析5:byteview.go</a>
+          <a href="/2020/03/15/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%905/" class="post-title-link" itemprop="url">groupcache源码分析5:byteview.go</a>
         </h2>
 
         <div class="post-meta-container">
@@ -680,7 +771,7 @@
           <p>byteview.go文件提供了一个数据结构ByteView，它是对[]byte或string类型的一个封装，提供了一些方法。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/2020/03/15/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%905/#more" rel="contents">
+              <a class="btn" href="/2020/03/15/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%905/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -798,7 +889,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2020/03/14/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%904/">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2020/03/14/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%904/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -811,7 +902,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/2020/03/14/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%904/" class="post-title-link" itemprop="url">groupcache源码分析4:singleflight.go</a>
+          <a href="/2020/03/14/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%904/" class="post-title-link" itemprop="url">groupcache源码分析4:singleflight.go</a>
         </h2>
 
         <div class="post-meta-container">
@@ -858,7 +949,7 @@
           <p>singleflight.go文件代码不多，主要是提供了一个竞争执行方法，利用sync.WaitGroup来让重复的请求，进行等待，只实际执行一次，并将执行结果返回给所有等待的请求。算是一个并发的处理机制。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/2020/03/14/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%904/#more" rel="contents">
+              <a class="btn" href="/2020/03/14/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%904/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -889,7 +980,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2020/03/11/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%903/">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2020/03/11/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%903/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -902,7 +993,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/2020/03/11/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%903/" class="post-title-link" itemprop="url">groupcache源码分析3:lru.go</a>
+          <a href="/2020/03/11/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%903/" class="post-title-link" itemprop="url">groupcache源码分析3:lru.go</a>
         </h2>
 
         <div class="post-meta-container">
@@ -949,7 +1040,7 @@
           <p>LRU算法全称Least Recently Used ，最近最少使用，当数据所占内存达到一定阈值，我们要移除掉最近最少使用的数据。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/2020/03/11/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%903/#more" rel="contents">
+              <a class="btn" href="/2020/03/11/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%903/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -980,7 +1071,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2020/03/10/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%902/">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2020/03/10/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%902/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -993,7 +1084,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/2020/03/10/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%902/" class="post-title-link" itemprop="url">groupcache源码分析2:groupcachepb</a>
+          <a href="/2020/03/10/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%902/" class="post-title-link" itemprop="url">groupcache源码分析2:groupcachepb</a>
         </h2>
 
         <div class="post-meta-container">
@@ -1040,98 +1131,7 @@
           <p>groupcachepb打开后我们可以看到.proto文件和.pb.go文件，这玩意儿我们很熟悉，protobuf协议嘛，我们只需要关注.proto即可，.pb.go是基于他生成，关于protobuf的具体内容不详述，大家知道他是一个用来进行通信的协议即可。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/2020/03/10/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%902/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2020/03/09/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%901/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Eric Luj">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="EricLuj的博客">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2020/03/09/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%901/" class="post-title-link" itemprop="url">groupcache源码分析1:consistenthash.go</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2020-03-09 22:21:58" itemprop="dateCreated datePublished" datetime="2020-03-09T22:21:58+08:00">2020-03-09</time>
-    </span>
-      <span class="post-meta-item">
-        <span class="post-meta-item-icon">
-          <i class="far fa-calendar-check"></i>
-        </span>
-        <span class="post-meta-item-text">更新于</span>
-        <time title="修改时间：2022-08-21 17:14:18" itemprop="dateModified" datetime="2022-08-21T17:14:18+08:00">2022-08-21</time>
-      </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/go/" itemprop="url" rel="index"><span itemprop="name">go</span></a>
-        </span>
-          ，
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/go/groupcache/" itemprop="url" rel="index"><span itemprop="name">groupcache</span></a>
-        </span>
-    </span>
-
-  
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <p>consistenthash.go文件主要是提供一个Map数据结构，它基于一致性哈希算法，来达到根据缓存的key名，去寻找对应服务器结点的作用。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2020/03/09/groupcache/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%901/#more" rel="contents">
+              <a class="btn" href="/2020/03/10/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%902/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -1155,7 +1155,7 @@
 
 
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/page/4/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/4/">4</a><span class="page-number current">5</span>
+    <a class="extend prev" rel="prev" href="/page/4/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/4/">4</a><span class="page-number current">5</span><a class="page-number" href="/page/6/">6</a><a class="extend next" rel="next" href="/page/6/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
 
 
@@ -1189,7 +1189,7 @@
 
 <div class="copyright">
   &copy; 
-  <span itemprop="copyrightYear">2024</span>
+  <span itemprop="copyrightYear">2025</span>
   <span class="with-love">
     <i class="fa fa-heart"></i>
   </span>

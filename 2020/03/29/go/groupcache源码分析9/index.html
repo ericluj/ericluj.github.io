@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.1/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css">
+
+<script class="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","images":"/images","scheme":"Pisces","version":"8.0.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}};
+  </script>
+<meta name="description" content="终于到了最后一个文件groupcache.go，跟项目同名，看着就知道它的重要性了。前面我们分析了那么多，这一篇就来看看如何利用那些零件，来具体去实现整个缓存逻辑。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="groupcache源码分析9:groupcache.go">
+<meta property="og:url" content="http://example.com/2020/03/29/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%909/index.html">
+<meta property="og:site_name" content="EricLuj的博客">
+<meta property="og:description" content="终于到了最后一个文件groupcache.go，跟项目同名，看着就知道它的重要性了。前面我们分析了那么多，这一篇就来看看如何利用那些零件，来具体去实现整个缓存逻辑。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-03-29T13:34:37.000Z">
+<meta property="article:modified_time" content="2020-11-25T14:24:23.775Z">
+<meta property="article:author" content="Eric Luj">
+<meta property="article:tag" content="groupcache">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://example.com/2020/03/29/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%909/">
+
+
+<script class="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+<title>groupcache源码分析9:groupcache.go | EricLuj的博客</title>
+  
+
+
+
+  <noscript>
+  <style>
+  body { margin-top: 2rem; }
+
+  .use-motion .menu-item,
+  .use-motion .sidebar,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header {
+    visibility: visible;
+  }
+
+  .use-motion .header,
+  .use-motion .site-brand-container .toggle,
+  .use-motion .footer { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle,
+  .use-motion .custom-logo-image {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line {
+    transform: scaleX(1);
+  }
+
+  .search-pop-overlay, .sidebar-nav { display: none; }
+  .sidebar-panel { display: block; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">EricLuj的博客</h1>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-overview-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <section class="post-toc-wrap sidebar-panel">
+        </section>
+        <!--/noindex-->
+
+        <section class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">Eric Luj</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">51</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">5</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+        </section>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2020/03/29/go/groupcache%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%909/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Eric Luj">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="EricLuj的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          groupcache源码分析9:groupcache.go
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-03-29 21:34:37" itemprop="dateCreated datePublished" datetime="2020-03-29T21:34:37+08:00">2020-03-29</time>
+    </span>
+      <span class="post-meta-item">
+        <span class="post-meta-item-icon">
+          <i class="far fa-calendar-check"></i>
+        </span>
+        <span class="post-meta-item-text">更新于</span>
+        <time title="修改时间：2020-11-25 22:24:23" itemprop="dateModified" datetime="2020-11-25T22:24:23+08:00">2020-11-25</time>
+      </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/go/" itemprop="url" rel="index"><span itemprop="name">go</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/go/groupcache/" itemprop="url" rel="index"><span itemprop="name">groupcache</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span id="busuanzi_value_page_pv"></span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>终于到了最后一个文件groupcache.go，跟项目同名，看着就知道它的重要性了。前面我们分析了那么多，这一篇就来看看如何利用那些零件，来具体去实现整个缓存逻辑。</p>
+<a id="more"></a>
+
+<ol>
+<li><p>Getter接口，又一个Get方法，根据key查询到对应值，保存到dest中。GetterFunc是一个实现了Getter接口的func类型。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">type</span> Getter <span class="token keyword">interface</span> <span class="token punctuation">&#123;</span>
+	<span class="token function">Get</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">,</span> key <span class="token builtin">string</span><span class="token punctuation">,</span> dest Sink<span class="token punctuation">)</span> <span class="token builtin">error</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">type</span> GetterFunc <span class="token keyword">func</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">,</span> key <span class="token builtin">string</span><span class="token punctuation">,</span> dest Sink<span class="token punctuation">)</span> <span class="token builtin">error</span>
+
+<span class="token keyword">func</span> <span class="token punctuation">(</span>f GetterFunc<span class="token punctuation">)</span> <span class="token function">Get</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">,</span> key <span class="token builtin">string</span><span class="token punctuation">,</span> dest Sink<span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">return</span> <span class="token function">f</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> key<span class="token punctuation">,</span> dest<span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>定义一些使用到的变量。groups保存group与其对应结构体，initPeerServerOnce是一个sync.Once，它能保证Do方法只会被执行一次，实际上就是保证initPeerServer只会被执行一次。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">var</span> <span class="token punctuation">(</span>
+	mu     sync<span class="token punctuation">.</span>RWMutex
+	groups <span class="token operator">=</span> <span class="token function">make</span><span class="token punctuation">(</span><span class="token keyword">map</span><span class="token punctuation">[</span><span class="token builtin">string</span><span class="token punctuation">]</span><span class="token operator">*</span>Group<span class="token punctuation">)</span>
+
+	initPeerServerOnce sync<span class="token punctuation">.</span>Once
+	initPeerServer     <span class="token keyword">func</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>读锁并获取group名称对应的对象。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token function">GetGroup</span><span class="token punctuation">(</span>name <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token operator">*</span>Group <span class="token punctuation">&#123;</span>
+	mu<span class="token punctuation">.</span><span class="token function">RLock</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	g <span class="token operator">:=</span> groups<span class="token punctuation">[</span>name<span class="token punctuation">]</span>
+	mu<span class="token punctuation">.</span><span class="token function">RUnlock</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token keyword">return</span> g
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>创建Group，名称需保证唯一。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token function">NewGroup</span><span class="token punctuation">(</span>name <span class="token builtin">string</span><span class="token punctuation">,</span> cacheBytes <span class="token builtin">int64</span><span class="token punctuation">,</span> getter Getter<span class="token punctuation">)</span> <span class="token operator">*</span>Group <span class="token punctuation">&#123;</span>
+	<span class="token keyword">return</span> <span class="token function">newGroup</span><span class="token punctuation">(</span>name<span class="token punctuation">,</span> cacheBytes<span class="token punctuation">,</span> getter<span class="token punctuation">,</span> <span class="token boolean">nil</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">func</span> <span class="token function">newGroup</span><span class="token punctuation">(</span>name <span class="token builtin">string</span><span class="token punctuation">,</span> cacheBytes <span class="token builtin">int64</span><span class="token punctuation">,</span> getter Getter<span class="token punctuation">,</span> peers PeerPicker<span class="token punctuation">)</span> <span class="token operator">*</span>Group <span class="token punctuation">&#123;</span>
+	<span class="token keyword">if</span> getter <span class="token operator">==</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+		<span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"nil Getter"</span><span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+	mu<span class="token punctuation">.</span><span class="token function">Lock</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token keyword">defer</span> mu<span class="token punctuation">.</span><span class="token function">Unlock</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	initPeerServerOnce<span class="token punctuation">.</span><span class="token function">Do</span><span class="token punctuation">(</span>callInitPeerServer<span class="token punctuation">)</span> <span class="token comment">//保证callInitPeerServer只会被调用一次</span>
+	<span class="token keyword">if</span> <span class="token boolean">_</span><span class="token punctuation">,</span> dup <span class="token operator">:=</span> groups<span class="token punctuation">[</span>name<span class="token punctuation">]</span><span class="token punctuation">;</span> dup <span class="token punctuation">&#123;</span>
+		<span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"duplicate registration of group "</span> <span class="token operator">+</span> name<span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+	g <span class="token operator">:=</span> <span class="token operator">&amp;</span>Group<span class="token punctuation">&#123;</span>
+		name<span class="token punctuation">:</span>       name<span class="token punctuation">,</span>
+		getter<span class="token punctuation">:</span>     getter<span class="token punctuation">,</span>
+		peers<span class="token punctuation">:</span>      peers<span class="token punctuation">,</span>
+		cacheBytes<span class="token punctuation">:</span> cacheBytes<span class="token punctuation">,</span>
+		loadGroup<span class="token punctuation">:</span>  <span class="token operator">&amp;</span>singleflight<span class="token punctuation">.</span>Group<span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token keyword">if</span> fn <span class="token operator">:=</span> newGroupHook<span class="token punctuation">;</span> fn <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span> <span class="token comment">//钩子方法</span>
+		<span class="token function">fn</span><span class="token punctuation">(</span>g<span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+	groups<span class="token punctuation">[</span>name<span class="token punctuation">]</span> <span class="token operator">=</span> g
+	<span class="token keyword">return</span> g
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>创建Group时用到的几个关联项。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">var</span> newGroupHook <span class="token keyword">func</span><span class="token punctuation">(</span><span class="token operator">*</span>Group<span class="token punctuation">)</span> <span class="token comment">//钩子，创建Group时被调用。</span>
+
+<span class="token keyword">func</span> <span class="token function">RegisterNewGroupHook</span><span class="token punctuation">(</span>fn <span class="token keyword">func</span><span class="token punctuation">(</span><span class="token operator">*</span>Group<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> 
+	<span class="token keyword">if</span> newGroupHook <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+		<span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"RegisterNewGroupHook called more than once"</span><span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+	newGroupHook <span class="token operator">=</span> fn
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">func</span> <span class="token function">RegisterServerStart</span><span class="token punctuation">(</span>fn <span class="token keyword">func</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">if</span> initPeerServer <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+		<span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"RegisterServerStart called more than once"</span><span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+	initPeerServer <span class="token operator">=</span> fn
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">func</span> <span class="token function">callInitPeerServer</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token comment">//钩子，当第一个Group被创建时调用。</span>
+	<span class="token keyword">if</span> initPeerServer <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+		<span class="token function">initPeerServer</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>Group结构体的定义。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">type</span> Group <span class="token keyword">struct</span> <span class="token punctuation">&#123;</span>
+	name       <span class="token builtin">string</span> <span class="token comment">//名称</span>
+	getter     Getter <span class="token comment">//获取缓存的方法</span>
+	peersOnce  sync<span class="token punctuation">.</span>Once
+	peers      PeerPicker
+	cacheBytes <span class="token builtin">int64</span> <span class="token comment">//缓存大小限制</span>
+
+	mainCache cache <span class="token comment">//属于当前peer的缓存</span>
+	hotCache cache <span class="token comment">//属于其他peer的缓存，但是被查询当前peer额外保存一份</span>
+
+	loadGroup flightGroup <span class="token comment">//竞争请求，前面的singleflight.go</span>
+
+	<span class="token boolean">_</span> <span class="token builtin">int32</span> 
+	Stats Stats <span class="token comment">//统计值</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">type</span> flightGroup <span class="token keyword">interface</span> <span class="token punctuation">&#123;</span>
+	<span class="token function">Do</span><span class="token punctuation">(</span>key <span class="token builtin">string</span><span class="token punctuation">,</span> fn <span class="token keyword">func</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">(</span><span class="token keyword">interface</span><span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span> <span class="token builtin">error</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">(</span><span class="token keyword">interface</span><span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span> <span class="token builtin">error</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">type</span> Stats <span class="token keyword">struct</span> <span class="token punctuation">&#123;</span>
+	Gets           AtomicInt <span class="token comment">//get请求总次数</span>
+	CacheHits      AtomicInt <span class="token comment">//从mainCache或hotCache命中的次数</span>
+	PeerLoads      AtomicInt <span class="token comment">//从其他peer获取数据的次数</span>
+	PeerErrors     AtomicInt <span class="token comment">//从其他peer获取数据错误的次数</span>
+	Loads          AtomicInt <span class="token comment">//非命中本peer的cache次数</span>
+	LoadsDeduped   AtomicInt <span class="token comment">//同一时间多请求只记一次</span>
+	LocalLoads     AtomicInt <span class="token comment">//从local获取数据总次数</span>
+	LocalLoadErrs  AtomicInt <span class="token comment">//从local获取数据错误次数</span>
+	ServerRequests AtomicInt <span class="token comment">//peer的所有http请求总次数</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>Name方法返回名称。initPeers对peers属性赋值。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>g <span class="token operator">*</span>Group<span class="token punctuation">)</span> <span class="token function">Name</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token builtin">string</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">return</span> g<span class="token punctuation">.</span>name
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">func</span> <span class="token punctuation">(</span>g <span class="token operator">*</span>Group<span class="token punctuation">)</span> <span class="token function">initPeers</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">if</span> g<span class="token punctuation">.</span>peers <span class="token operator">==</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+		g<span class="token punctuation">.</span>peers <span class="token operator">=</span> <span class="token function">getPeers</span><span class="token punctuation">(</span>g<span class="token punctuation">.</span>name<span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>这个方法是Group，根据参数key查询数据，然后将值放到dest里面。这里要注意下destPopulated的逻辑。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>g <span class="token operator">*</span>Group<span class="token punctuation">)</span> <span class="token function">Get</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">,</span> key <span class="token builtin">string</span><span class="token punctuation">,</span> dest Sink<span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">&#123;</span>
+	g<span class="token punctuation">.</span>peersOnce<span class="token punctuation">.</span><span class="token function">Do</span><span class="token punctuation">(</span>g<span class="token punctuation">.</span>initPeers<span class="token punctuation">)</span> <span class="token comment">//保证initPeers只被执行一次</span>
+	g<span class="token punctuation">.</span>Stats<span class="token punctuation">.</span>Gets<span class="token punctuation">.</span><span class="token function">Add</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token comment">//统计http总数量</span>
+	<span class="token keyword">if</span> dest <span class="token operator">==</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> errors<span class="token punctuation">.</span><span class="token function">New</span><span class="token punctuation">(</span><span class="token string">"groupcache: nil dest Sink"</span><span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+	value<span class="token punctuation">,</span> cacheHit <span class="token operator">:=</span> g<span class="token punctuation">.</span><span class="token function">lookupCache</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span> <span class="token comment">//从mainCache和hotCache中查询</span>
+
+	<span class="token keyword">if</span> cacheHit <span class="token punctuation">&#123;</span> <span class="token comment">//查询到统计+1并返回数据</span>
+		g<span class="token punctuation">.</span>Stats<span class="token punctuation">.</span>CacheHits<span class="token punctuation">.</span><span class="token function">Add</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span>
+		<span class="token keyword">return</span> <span class="token function">setSinkView</span><span class="token punctuation">(</span>dest<span class="token punctuation">,</span> value<span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+
+	destPopulated <span class="token operator">:=</span> <span class="token boolean">false</span>
+    <span class="token comment">//同时多个请求，只有真正执行了的那个call，才会destPopulated返回true</span>
+    <span class="token comment">//为避免对dest中的值（实际时指针）重复赋值，只需要执行一次</span>
+	value<span class="token punctuation">,</span> destPopulated<span class="token punctuation">,</span> err <span class="token operator">:=</span> g<span class="token punctuation">.</span><span class="token function">load</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> key<span class="token punctuation">,</span> dest<span class="token punctuation">)</span> 
+	<span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> err
+	<span class="token punctuation">&#125;</span>
+	<span class="token keyword">if</span> destPopulated <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> <span class="token boolean">nil</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token keyword">return</span> <span class="token function">setSinkView</span><span class="token punctuation">(</span>dest<span class="token punctuation">,</span> value<span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>依次从mainCache和hotCache获取数据。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>g <span class="token operator">*</span>Group<span class="token punctuation">)</span> <span class="token function">lookupCache</span><span class="token punctuation">(</span>key <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>value ByteView<span class="token punctuation">,</span> ok <span class="token builtin">bool</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">if</span> g<span class="token punctuation">.</span>cacheBytes <span class="token operator">&lt;=</span> <span class="token number">0</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span>
+	<span class="token punctuation">&#125;</span>
+	value<span class="token punctuation">,</span> ok <span class="token operator">=</span> g<span class="token punctuation">.</span>mainCache<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span>
+	<span class="token keyword">if</span> ok <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span>
+	<span class="token punctuation">&#125;</span>
+	value<span class="token punctuation">,</span> ok <span class="token operator">=</span> g<span class="token punctuation">.</span>hotCache<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span>
+	<span class="token keyword">return</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>加载数据。</p>
+</li>
+</ol>
+<p>Do方法中又再次进行了lookupCache，注释里是这么说的，singleflight只能对同时重叠的调用进行处理，假设有两个请求同时错过了cache，会导致load被调用两次，不幸的情况会导致cache.nbytes做出错误的计算。</p>
+<p>我们梳理一下上面这段话，按照singleflight的逻辑，如果两个请求同时进入了Do方法，因为lock的缘故，第一个获的锁的执行，第二个等待锁释放，然后拿到call的返回值，实际并未执行。一开始我没想通，这样冲突不是不存在吗，为啥还要lookupCache一次呢？事实上，可能存在这一种情况，两个请求过来都没查到缓存，然后同时进入load方法，假如现在第一个执行的比较快，在第二个还没有获取锁就执行完毕退出了，则请求二成功获取锁，执行操作并且增加cache.nbytes，那么就会计算不正确了。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>g <span class="token operator">*</span>Group<span class="token punctuation">)</span> <span class="token function">load</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">,</span> key <span class="token builtin">string</span><span class="token punctuation">,</span> dest Sink<span class="token punctuation">)</span> <span class="token punctuation">(</span>value ByteView<span class="token punctuation">,</span> destPopulated <span class="token builtin">bool</span><span class="token punctuation">,</span> err <span class="token builtin">error</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	g<span class="token punctuation">.</span>Stats<span class="token punctuation">.</span>Loads<span class="token punctuation">.</span><span class="token function">Add</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span>
+	viewi<span class="token punctuation">,</span> err <span class="token operator">:=</span> g<span class="token punctuation">.</span>loadGroup<span class="token punctuation">.</span><span class="token function">Do</span><span class="token punctuation">(</span>key<span class="token punctuation">,</span> <span class="token keyword">func</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">(</span><span class="token keyword">interface</span><span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span> <span class="token builtin">error</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">if</span> value<span class="token punctuation">,</span> cacheHit <span class="token operator">:=</span> g<span class="token punctuation">.</span><span class="token function">lookupCache</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span><span class="token punctuation">;</span> cacheHit <span class="token punctuation">&#123;</span>
+			g<span class="token punctuation">.</span>Stats<span class="token punctuation">.</span>CacheHits<span class="token punctuation">.</span><span class="token function">Add</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span>
+			<span class="token keyword">return</span> value<span class="token punctuation">,</span> <span class="token boolean">nil</span>
+		<span class="token punctuation">&#125;</span>
+		g<span class="token punctuation">.</span>Stats<span class="token punctuation">.</span>LoadsDeduped<span class="token punctuation">.</span><span class="token function">Add</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span>
+		<span class="token keyword">var</span> value ByteView
+		<span class="token keyword">var</span> err <span class="token builtin">error</span>
+		<span class="token keyword">if</span> peer<span class="token punctuation">,</span> ok <span class="token operator">:=</span> g<span class="token punctuation">.</span>peers<span class="token punctuation">.</span><span class="token function">PickPeer</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span><span class="token punctuation">;</span> ok <span class="token punctuation">&#123;</span> <span class="token comment">//获取peer，如果peer是自身返回nil</span>
+			value<span class="token punctuation">,</span> err <span class="token operator">=</span> g<span class="token punctuation">.</span><span class="token function">getFromPeer</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> peer<span class="token punctuation">,</span> key<span class="token punctuation">)</span> <span class="token comment">//从peer获取值</span>
+			<span class="token keyword">if</span> err <span class="token operator">==</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+				g<span class="token punctuation">.</span>Stats<span class="token punctuation">.</span>PeerLoads<span class="token punctuation">.</span><span class="token function">Add</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span>
+				<span class="token keyword">return</span> value<span class="token punctuation">,</span> <span class="token boolean">nil</span>
+			<span class="token punctuation">&#125;</span>
+			g<span class="token punctuation">.</span>Stats<span class="token punctuation">.</span>PeerErrors<span class="token punctuation">.</span><span class="token function">Add</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span>			
+		<span class="token punctuation">&#125;</span>
+		value<span class="token punctuation">,</span> err <span class="token operator">=</span> g<span class="token punctuation">.</span><span class="token function">getLocally</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> key<span class="token punctuation">,</span> dest<span class="token punctuation">)</span> <span class="token comment">//从本地获取数据</span>
+		<span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+			g<span class="token punctuation">.</span>Stats<span class="token punctuation">.</span>LocalLoadErrs<span class="token punctuation">.</span><span class="token function">Add</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span>
+			<span class="token keyword">return</span> <span class="token boolean">nil</span><span class="token punctuation">,</span> err
+		<span class="token punctuation">&#125;</span>
+		g<span class="token punctuation">.</span>Stats<span class="token punctuation">.</span>LocalLoads<span class="token punctuation">.</span><span class="token function">Add</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span>
+		destPopulated <span class="token operator">=</span> <span class="token boolean">true</span> <span class="token comment">// dest已经被填充</span>
+		g<span class="token punctuation">.</span><span class="token function">populateCache</span><span class="token punctuation">(</span>key<span class="token punctuation">,</span> value<span class="token punctuation">,</span> <span class="token operator">&amp;</span>g<span class="token punctuation">.</span>mainCache<span class="token punctuation">)</span> <span class="token comment">//数据加到mainCache中</span>
+		<span class="token keyword">return</span> value<span class="token punctuation">,</span> <span class="token boolean">nil</span>
+	<span class="token punctuation">&#125;</span><span class="token punctuation">)</span>
+	<span class="token keyword">if</span> err <span class="token operator">==</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+		value <span class="token operator">=</span> viewi<span class="token punctuation">.</span><span class="token punctuation">(</span>ByteView<span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token keyword">return</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="11">
+<li><p>从其他peer获取数据，peer.Get实际就是httpGetter的Get方法。这里使用了一个随机函数，一定概率会将其放入hotCache。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>g <span class="token operator">*</span>Group<span class="token punctuation">)</span> <span class="token function">getFromPeer</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">,</span> peer ProtoGetter<span class="token punctuation">,</span> key <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>ByteView<span class="token punctuation">,</span> <span class="token builtin">error</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	req <span class="token operator">:=</span> <span class="token operator">&amp;</span>pb<span class="token punctuation">.</span>GetRequest<span class="token punctuation">&#123;</span>
+		Group<span class="token punctuation">:</span> <span class="token operator">&amp;</span>g<span class="token punctuation">.</span>name<span class="token punctuation">,</span>
+		Key<span class="token punctuation">:</span>   <span class="token operator">&amp;</span>key<span class="token punctuation">,</span>
+	<span class="token punctuation">&#125;</span>
+	res <span class="token operator">:=</span> <span class="token operator">&amp;</span>pb<span class="token punctuation">.</span>GetResponse<span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span>
+	err <span class="token operator">:=</span> peer<span class="token punctuation">.</span><span class="token function">Get</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> req<span class="token punctuation">,</span> res<span class="token punctuation">)</span>
+	<span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> ByteView<span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span> err
+	<span class="token punctuation">&#125;</span>
+	value <span class="token operator">:=</span> ByteView<span class="token punctuation">&#123;</span>b<span class="token punctuation">:</span> res<span class="token punctuation">.</span>Value<span class="token punctuation">&#125;</span>
+	<span class="token keyword">if</span> rand<span class="token punctuation">.</span><span class="token function">Intn</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span> <span class="token punctuation">&#123;</span>
+		g<span class="token punctuation">.</span><span class="token function">populateCache</span><span class="token punctuation">(</span>key<span class="token punctuation">,</span> value<span class="token punctuation">,</span> <span class="token operator">&amp;</span>g<span class="token punctuation">.</span>hotCache<span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token keyword">return</span> value<span class="token punctuation">,</span> <span class="token boolean">nil</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>getLocally中实际调用的Get方法是我们在创建Group的时候去设定的，我们会在后面实际使用中介绍。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>g <span class="token operator">*</span>Group<span class="token punctuation">)</span> <span class="token function">getLocally</span><span class="token punctuation">(</span>ctx context<span class="token punctuation">.</span>Context<span class="token punctuation">,</span> key <span class="token builtin">string</span><span class="token punctuation">,</span> dest Sink<span class="token punctuation">)</span> <span class="token punctuation">(</span>ByteView<span class="token punctuation">,</span> <span class="token builtin">error</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	err <span class="token operator">:=</span> g<span class="token punctuation">.</span>getter<span class="token punctuation">.</span><span class="token function">Get</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> key<span class="token punctuation">,</span> dest<span class="token punctuation">)</span>
+	<span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> ByteView<span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span> err
+	<span class="token punctuation">&#125;</span>
+	<span class="token keyword">return</span> dest<span class="token punctuation">.</span><span class="token function">view</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>设置缓存。假如当前缓存总大小超过了上线，那么使用lru来去除最老的值。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>g <span class="token operator">*</span>Group<span class="token punctuation">)</span> <span class="token function">populateCache</span><span class="token punctuation">(</span>key <span class="token builtin">string</span><span class="token punctuation">,</span> value ByteView<span class="token punctuation">,</span> cache <span class="token operator">*</span>cache<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">if</span> g<span class="token punctuation">.</span>cacheBytes <span class="token operator">&lt;=</span> <span class="token number">0</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span>
+	<span class="token punctuation">&#125;</span>
+	cache<span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span>key<span class="token punctuation">,</span> value<span class="token punctuation">)</span>
+
+	<span class="token keyword">for</span> <span class="token punctuation">&#123;</span>
+		mainBytes <span class="token operator">:=</span> g<span class="token punctuation">.</span>mainCache<span class="token punctuation">.</span><span class="token function">bytes</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+		hotBytes <span class="token operator">:=</span> g<span class="token punctuation">.</span>hotCache<span class="token punctuation">.</span><span class="token function">bytes</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+		<span class="token keyword">if</span> mainBytes<span class="token operator">+</span>hotBytes <span class="token operator">&lt;=</span> g<span class="token punctuation">.</span>cacheBytes <span class="token punctuation">&#123;</span>
+			<span class="token keyword">return</span>
+		<span class="token punctuation">&#125;</span>
+
+		victim <span class="token operator">:=</span> <span class="token operator">&amp;</span>g<span class="token punctuation">.</span>mainCache
+		<span class="token keyword">if</span> hotBytes <span class="token operator">></span> mainBytes<span class="token operator">/</span><span class="token number">8</span> <span class="token punctuation">&#123;</span>
+			victim <span class="token operator">=</span> <span class="token operator">&amp;</span>g<span class="token punctuation">.</span>hotCache
+		<span class="token punctuation">&#125;</span>
+		victim<span class="token punctuation">.</span><span class="token function">removeOldest</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>常量定义。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">type</span> CacheType <span class="token builtin">int</span>
+
+<span class="token keyword">const</span> <span class="token punctuation">(</span>
+	MainCache CacheType <span class="token operator">=</span> <span class="token boolean">iota</span> <span class="token operator">+</span> <span class="token number">1</span>
+	HotCache
+<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>返回Group中的缓存统计信息。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>g <span class="token operator">*</span>Group<span class="token punctuation">)</span> <span class="token function">CacheStats</span><span class="token punctuation">(</span>which CacheType<span class="token punctuation">)</span> CacheStats <span class="token punctuation">&#123;</span>
+	<span class="token keyword">switch</span> which <span class="token punctuation">&#123;</span>
+	<span class="token keyword">case</span> MainCache<span class="token punctuation">:</span>
+		<span class="token keyword">return</span> g<span class="token punctuation">.</span>mainCache<span class="token punctuation">.</span><span class="token function">stats</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token keyword">case</span> HotCache<span class="token punctuation">:</span>
+		<span class="token keyword">return</span> g<span class="token punctuation">.</span>hotCache<span class="token punctuation">.</span><span class="token function">stats</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token keyword">default</span><span class="token punctuation">:</span>
+		<span class="token keyword">return</span> CacheStats<span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span>
+	<span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>cache结构体定义，与统计信息返回方法。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">type</span> cache <span class="token keyword">struct</span> <span class="token punctuation">&#123;</span>
+	mu         sync<span class="token punctuation">.</span>RWMutex
+	nbytes     <span class="token builtin">int64</span> <span class="token comment">// 缓存大小</span>
+	lru        <span class="token operator">*</span>lru<span class="token punctuation">.</span>Cache <span class="token comment">//缓存主体，lru</span>
+	nhit<span class="token punctuation">,</span> nget <span class="token builtin">int64</span> <span class="token comment">//命中和请求数</span>
+	nevict     <span class="token builtin">int64</span> <span class="token comment">// 驱逐数</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">func</span> <span class="token punctuation">(</span>c <span class="token operator">*</span>cache<span class="token punctuation">)</span> <span class="token function">stats</span><span class="token punctuation">(</span><span class="token punctuation">)</span> CacheStats <span class="token punctuation">&#123;</span>
+	c<span class="token punctuation">.</span>mu<span class="token punctuation">.</span><span class="token function">RLock</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token keyword">defer</span> c<span class="token punctuation">.</span>mu<span class="token punctuation">.</span><span class="token function">RUnlock</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token keyword">return</span> CacheStats<span class="token punctuation">&#123;</span>
+		Bytes<span class="token punctuation">:</span>     c<span class="token punctuation">.</span>nbytes<span class="token punctuation">,</span>
+		Items<span class="token punctuation">:</span>     c<span class="token punctuation">.</span><span class="token function">itemsLocked</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+		Gets<span class="token punctuation">:</span>      c<span class="token punctuation">.</span>nget<span class="token punctuation">,</span>
+		Hits<span class="token punctuation">:</span>      c<span class="token punctuation">.</span>nhit<span class="token punctuation">,</span>
+		Evictions<span class="token punctuation">:</span> c<span class="token punctuation">.</span>nevict<span class="token punctuation">,</span>
+	<span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">type</span> CacheStats <span class="token keyword">struct</span> <span class="token punctuation">&#123;</span>
+	Bytes     <span class="token builtin">int64</span>
+	Items     <span class="token builtin">int64</span>
+	Gets      <span class="token builtin">int64</span>
+	Hits      <span class="token builtin">int64</span>
+	Evictions <span class="token builtin">int64</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>添加缓存方法，基于lru的Add。注意这里的nbytes计算，包含key和val的总长度。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>c <span class="token operator">*</span>cache<span class="token punctuation">)</span> <span class="token function">add</span><span class="token punctuation">(</span>key <span class="token builtin">string</span><span class="token punctuation">,</span> value ByteView<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	c<span class="token punctuation">.</span>mu<span class="token punctuation">.</span><span class="token function">Lock</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token keyword">defer</span> c<span class="token punctuation">.</span>mu<span class="token punctuation">.</span><span class="token function">Unlock</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token keyword">if</span> c<span class="token punctuation">.</span>lru <span class="token operator">==</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+		c<span class="token punctuation">.</span>lru <span class="token operator">=</span> <span class="token operator">&amp;</span>lru<span class="token punctuation">.</span>Cache<span class="token punctuation">&#123;</span>
+			OnEvicted<span class="token punctuation">:</span> <span class="token keyword">func</span><span class="token punctuation">(</span>key lru<span class="token punctuation">.</span>Key<span class="token punctuation">,</span> value <span class="token keyword">interface</span><span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+				val <span class="token operator">:=</span> value<span class="token punctuation">.</span><span class="token punctuation">(</span>ByteView<span class="token punctuation">)</span>
+				c<span class="token punctuation">.</span>nbytes <span class="token operator">-=</span> <span class="token function">int64</span><span class="token punctuation">(</span><span class="token function">len</span><span class="token punctuation">(</span>key<span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token builtin">string</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token function">int64</span><span class="token punctuation">(</span>val<span class="token punctuation">.</span><span class="token function">Len</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+				c<span class="token punctuation">.</span>nevict<span class="token operator">++</span>
+			<span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+		<span class="token punctuation">&#125;</span>
+	<span class="token punctuation">&#125;</span>
+	c<span class="token punctuation">.</span>lru<span class="token punctuation">.</span><span class="token function">Add</span><span class="token punctuation">(</span>key<span class="token punctuation">,</span> value<span class="token punctuation">)</span>
+	c<span class="token punctuation">.</span>nbytes <span class="token operator">+=</span> <span class="token function">int64</span><span class="token punctuation">(</span><span class="token function">len</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token function">int64</span><span class="token punctuation">(</span>value<span class="token punctuation">.</span><span class="token function">Len</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>获取缓存。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>c <span class="token operator">*</span>cache<span class="token punctuation">)</span> <span class="token function">get</span><span class="token punctuation">(</span>key <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>value ByteView<span class="token punctuation">,</span> ok <span class="token builtin">bool</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	c<span class="token punctuation">.</span>mu<span class="token punctuation">.</span><span class="token function">Lock</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token keyword">defer</span> c<span class="token punctuation">.</span>mu<span class="token punctuation">.</span><span class="token function">Unlock</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	c<span class="token punctuation">.</span>nget<span class="token operator">++</span>
+	<span class="token keyword">if</span> c<span class="token punctuation">.</span>lru <span class="token operator">==</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span>
+	<span class="token punctuation">&#125;</span>
+	vi<span class="token punctuation">,</span> ok <span class="token operator">:=</span> c<span class="token punctuation">.</span>lru<span class="token punctuation">.</span><span class="token function">Get</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span>
+	<span class="token keyword">if</span> <span class="token operator">!</span>ok <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span>
+	<span class="token punctuation">&#125;</span>
+	c<span class="token punctuation">.</span>nhit<span class="token operator">++</span>
+	<span class="token keyword">return</span> vi<span class="token punctuation">.</span><span class="token punctuation">(</span>ByteView<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token boolean">true</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>删除老旧数据。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>c <span class="token operator">*</span>cache<span class="token punctuation">)</span> <span class="token function">removeOldest</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	c<span class="token punctuation">.</span>mu<span class="token punctuation">.</span><span class="token function">Lock</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token keyword">defer</span> c<span class="token punctuation">.</span>mu<span class="token punctuation">.</span><span class="token function">Unlock</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token keyword">if</span> c<span class="token punctuation">.</span>lru <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+		c<span class="token punctuation">.</span>lru<span class="token punctuation">.</span><span class="token function">RemoveOldest</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>获取缓存总大小和总数量。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>c <span class="token operator">*</span>cache<span class="token punctuation">)</span> <span class="token function">bytes</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token builtin">int64</span> <span class="token punctuation">&#123;</span>
+	c<span class="token punctuation">.</span>mu<span class="token punctuation">.</span><span class="token function">RLock</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token keyword">defer</span> c<span class="token punctuation">.</span>mu<span class="token punctuation">.</span><span class="token function">RUnlock</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token keyword">return</span> c<span class="token punctuation">.</span>nbytes
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">func</span> <span class="token punctuation">(</span>c <span class="token operator">*</span>cache<span class="token punctuation">)</span> <span class="token function">items</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token builtin">int64</span> <span class="token punctuation">&#123;</span>
+	c<span class="token punctuation">.</span>mu<span class="token punctuation">.</span><span class="token function">RLock</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token keyword">defer</span> c<span class="token punctuation">.</span>mu<span class="token punctuation">.</span><span class="token function">RUnlock</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token keyword">return</span> c<span class="token punctuation">.</span><span class="token function">itemsLocked</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">func</span> <span class="token punctuation">(</span>c <span class="token operator">*</span>cache<span class="token punctuation">)</span> <span class="token function">itemsLocked</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token builtin">int64</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">if</span> c<span class="token punctuation">.</span>lru <span class="token operator">==</span> <span class="token boolean">nil</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> <span class="token number">0</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token keyword">return</span> <span class="token function">int64</span><span class="token punctuation">(</span>c<span class="token punctuation">.</span>lru<span class="token punctuation">.</span><span class="token function">Len</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>封装方法，用来完成对int64的原子操作。</p>
+<pre class="line-numbers language-go" data-language="go"><code class="language-go"><span class="token keyword">type</span> AtomicInt <span class="token builtin">int64</span>
+
+<span class="token keyword">func</span> <span class="token punctuation">(</span>i <span class="token operator">*</span>AtomicInt<span class="token punctuation">)</span> <span class="token function">Add</span><span class="token punctuation">(</span>n <span class="token builtin">int64</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+	atomic<span class="token punctuation">.</span><span class="token function">AddInt64</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token builtin">int64</span><span class="token punctuation">)</span><span class="token punctuation">(</span>i<span class="token punctuation">)</span><span class="token punctuation">,</span> n<span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">func</span> <span class="token punctuation">(</span>i <span class="token operator">*</span>AtomicInt<span class="token punctuation">)</span> <span class="token function">Get</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token builtin">int64</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">return</span> atomic<span class="token punctuation">.</span><span class="token function">LoadInt64</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token builtin">int64</span><span class="token punctuation">)</span><span class="token punctuation">(</span>i<span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">func</span> <span class="token punctuation">(</span>i <span class="token operator">*</span>AtomicInt<span class="token punctuation">)</span> <span class="token function">String</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token builtin">string</span> <span class="token punctuation">&#123;</span>
+	<span class="token keyword">return</span> strconv<span class="token punctuation">.</span><span class="token function">FormatInt</span><span class="token punctuation">(</span>i<span class="token punctuation">.</span><span class="token function">Get</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">10</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/groupcache/" rel="tag"># groupcache</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2020/03/28/%E8%AF%BB%E4%B9%A6/2%E5%AE%9A%E6%8A%95%E5%8D%81%E5%B9%B4%E8%B4%A2%E5%8A%A1%E8%87%AA%E7%94%B1/" rel="prev" title="定投十年财务自由">
+                  <i class="fa fa-chevron-left"></i> 定投十年财务自由
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2020/04/05/algorithm/%E4%BA%8C%E5%88%86%E6%9F%A5%E6%89%BE/" rel="next" title="二分查找">
+                  二分查找 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      const activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      const commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Eric Luj</span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/pisces/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="//cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js"></script>
+<script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+
+
+</body>
+</html>
